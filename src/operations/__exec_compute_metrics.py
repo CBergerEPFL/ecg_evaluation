@@ -9,7 +9,8 @@ sys.path.append(os.path.join(ROOTPATH))
 
 # custom imports
 import shared_utils.utils_data as utils_data
-from metrics.main import save_metrics_to_xarray
+from shared_utils.utils_path import results_path
+from metrics.compute import save_metrics_to_xarray
 
 
 def main():
@@ -20,15 +21,10 @@ def main():
         help="Path to the input data with ECG to be analysed",
         default="/workspaces/ecg_evaluation/data/20221006_physio_quality/set-a/dataParquet",
     )
-    parser.add_argument(
-        "--save_path",
-        help="Path where computed metrics should be saved",
-        default="/workspaces/ecg_evaluation/results",
-    )
 
     args = parser.parse_args()
     input_path = args.input_path
-    save_path = args.save_path
+    save_path = results_path
     path_petastorm = f"file:///{input_path}"
 
     if not os.path.exists(save_path):

@@ -123,6 +123,28 @@ def format_data_to_xarray_2020(data_path: str, save_path: str | None = None):
     return ds_ecg
 
 
+def feature_checker(df_features: pd.DataFrame) -> bool:
+    """Function that check if the features in your feature dataset have the
+        good range ([0;1]) in your columns set
+
+    Args:
+        df_features (pd.DataFrame): Dataframe with features to be checked
+
+    Raises:
+        ValueError: Raise an error if the features are not between 0 and 1
+
+    Returns:
+        bool:  True if the features are between 0 and 1
+    """
+    columns_remove = np.array([])
+    for (colname, colval) in df_features.iteritems():
+        if not (np.min(colval) >= 0 and np.max(colval) <= 1):
+            columns_remove = np.append(columns_remove, colname)
+    if len(columns_remove) > 0:
+        raise ValueError("The features are not between 0 and 1")
+    return True
+
+
 def extract_index_label(ds_data, required_index=None):
     """Extract index and label from xarray dataset
 
@@ -159,6 +181,6 @@ def extract_index_label(ds_data, required_index=None):
         required_index = df_X.columns.tolist()
 
     if "HR" in required_index:
-        df_X["HR"] = HR_metrics
+        df_X.loc[:] = HR_metrics
 
     return df_X, df_y

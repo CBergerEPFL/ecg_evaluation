@@ -306,9 +306,9 @@ def classification_report_model(path_model, name_model=list([]), **kwargs):
         original_lab, prob_lab = list_creator_cv(path_CSV_folder)
         print(f"For model {models} : ")
         if kwargs.get("T"):
-            display(index_ml_calculator_cv(original_lab, prob_lab, t_used=kwargs["T"]))
+            index_ml_calculator_cv(original_lab, prob_lab, t_used=kwargs["T"])
         else:
-            display(index_ml_calculator_cv(original_lab, prob_lab))
+            index_ml_calculator_cv(original_lab, prob_lab)
 
 
 def index_ml_calculator_cv(original_label, prob_predicted, t_used=None):
