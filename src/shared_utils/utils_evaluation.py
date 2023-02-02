@@ -10,7 +10,6 @@ from sklearn.metrics import (
     roc_auc_score,
     multilabel_confusion_matrix,
 )
-from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     classification_report,
     confusion_matrix,
@@ -57,7 +56,7 @@ def feature_checker(df_features: pd.DataFrame) -> bool:
     return True
 
 
-def evaluate_index(df_index: pd.DataFrame, df_label: pd.DataFrame, **kwargs):
+def evaluate_index(df_index: pd.DataFrame, df_label: pd.DataFrame, thres_metric=None):
 
     if df_index.shape[1] > 1:
         raise ValueError(
@@ -69,7 +68,7 @@ def evaluate_index(df_index: pd.DataFrame, df_label: pd.DataFrame, **kwargs):
     # probability of class 0 (class 1 = unacceptable)
     np_prob = np.c_[np_index, 1 - np_index, df_label.to_numpy()]
 
-    index_ml_calculator_cv([np_prob[:, -1]], [np_prob[:, 1]], t_used=kwargs["T"])
+    index_ml_calculator_cv([np_prob[:, -1]], [np_prob[:, 1]], t_used=thres_metric)
 
 
 def classification_metrics(y_true, y_pred):
@@ -142,41 +141,44 @@ def index_ml_calculator_cv(y_label: list, y_pred: list, t_used=None):
         df [Pandas Dataframe] : Pandas Dataframe containing, for each binary label, a tuple with the mean and SD of each metrics calculated. The tuple with the mean and SD of the threshold obtained at each folds, is also given.
         df is also printed at the end of the function
     """
-    auc_roc = np.empty([len(y_label), 1])
-    auc_pr = np.empty([len(y_label), 1])
-    prec = np.empty([len(y_label), 1])
-    rec = np.empty([len(y_label), 1])
-    F1 = np.empty([len(y_label), 1])
-    Spec = np.empty([len(y_label), 1])
-    ACC = np.empty([len(y_label), 1])
-    MCC = np.empty([len(y_label), 1])
-    T = np.empty([len(y_label), 1])
+    auc_roc = np.empty([len(y_label)])
+    auc_pr = np.empty([len(y_label)])
+    prec = np.empty([len(y_label)])
+    rec = np.empty([len(y_label)])
+    F1 = np.empty([len(y_label)])
+    Spec = np.empty([len(y_label)])
+    ACC = np.empty([len(y_label)])
+    MCC = np.empty([len(y_label)])
+    T = np.empty([len(y_label)])
     for i, (y_label_cv, y_pred_cv) in enumerate(zip(y_label, y_pred)):
 
-        auc_roc[i, 0] = roc_auc_score(y_label_cv, y_pred_cv)
+        auc_roc[i] = roc_auc_score(y_label_cv, y_pred_cv)
         precision, recall, threshold = precision_recall_curve(
             y_label_cv, y_pred_cv, pos_label=1
         )
-        auc_pr[i, 0] = auc(recall, precision)
-
+        auc_pr[i] = auc(recall, precision)
         if t_used is not None:
             thresh = "(set T)"
-            MCC[i, 0] = matthews_corrcoef(y_label, (y_pred_cv >= t_used).astype(int))
-            T[i, 0] = t_used
+            MCC[i] = matthews_corrcoef(y_label_cv, (y_pred_cv >= t_used).astype(int))
+            T[i] = t_used
             label_pred = (y_pred >= t_used).astype(int)
         else:
             thresh = "(Max MCC)"
             mcc_tmp = np.array(
                 [
-                    matthews_corrcoef(y_label, (y_pred_cv[i][:, 1] >= t).astype(int))
+                    matthews_corrcoef(y_label_cv, (y_pred_cv >= t).astype(int))
                     for t in threshold
                 ]
             )
-            MCC[i, 0] = np.max(mcc_tmp)
+            MCC[i] = np.max(mcc_tmp)
             t_used = threshold[np.argmax(mcc_tmp)]
-            T[i, 0] = t_used
+            T[i] = t_used
             label_pred = (y_pred >= t_used).astype(int)
 
+        dict_metrics = classification_report(
+            y_label_cv, (y_pred_cv > t_used).astype(int), output_dict=True
+        )
+        breakpoint()
         precision, recall, f1, specificity, _, acc = classification_metrics(
             y_label, label_pred
         )

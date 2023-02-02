@@ -93,7 +93,7 @@ def save_metrics_to_xarray(
     ds_data["quality_metrics"] = da_metric
 
     if save_path is not None:
-        path_to_file = os.path.join(save_path, "ecg_data.nc")
+        path_to_file = os.path.join(save_path, "quality_metrics.nc")
         print(f"Saving computed metrics in netCDF format in: {path_to_file}")
         ds_data.to_netcdf(path_to_file)
 
