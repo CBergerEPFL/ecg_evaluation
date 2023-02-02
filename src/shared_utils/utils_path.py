@@ -16,3 +16,6 @@ if not os.path.exists(results_path):
 
 if not os.path.exists(os.path.join(results_path, "evaluation_metrics")):
     os.mkdir(os.path.join(results_path, "evaluation_metrics"))
+
+if not os.path.exists(os.path.join(results_path, "proba_methods")):
+    os.mkdir(os.path.join(results_path, "proba_methods"))
