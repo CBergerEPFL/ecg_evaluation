@@ -5,7 +5,8 @@ import numpy as np
 import xarray as xr
 from tqdm import tqdm
 
-sys.path.append(os.path.join(os.getcwd(), ".."))
+FILEPATH = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(os.path.join(FILEPATH))
 from .methods import method_registry
 
 list_normalization = ["SNRECG", "TSD", "Flatline"]
