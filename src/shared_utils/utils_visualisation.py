@@ -1,36 +1,15 @@
 import os
+import pickle as pkl
+import re
 
 import matplotlib.pyplot as plt
 import numpy as np
+from sklearn.metrics import auc, precision_recall_curve, roc_curve
 
 
-def roc_pr_cv_curve_index(path_indexes, names_methods=list([]), pos_label=0):
-
-    if len(os.listdir(path_indexes)) == 0:
-        raise AttributeError("No Model found!")
-
-    if len(indexes) == 0:
-
-        print("No model given! We will use all of them")
-        name_model = os.listdir(path_indexes)
-    else:
-        name_model = indexes
-        ref_model = os.listdir(path_indexes)
-
-        for r in name_model:
-            if r not in ref_model:
-                raise AttributeError(f"The index {r} do not exist")
-
-    for i in indexes:
-        print(f"Performance of {i}:")
-        plt.figure()
-        plot_graph_roc_pr_indexes(path_indexes, i, pos_label)
-
-
-def plot_graph_roc_pr_indexes(y_label: list, y_pred: list, name_model):
+def plot_roc_pr_curve(y_label: list, y_pred: list):
 
     k_cv = len(y_label)
-
     fig, ax = plt.subplots(nrows=2, ncols=1, figsize=(10, 15))
     color = iter(plt.cm.rainbow(np.linspace(0, 1, k_cv)))
     mean_fpr = np.linspace(0, 1, 500)
@@ -39,19 +18,15 @@ def plot_graph_roc_pr_indexes(y_label: list, y_pred: list, name_model):
     precs = []
     aucs_roc = []
     aucs_pr = []
-    for i, y_ori in enumerate(original_lab):
+    for i, (y_label_cv, y_pred_cv) in enumerate(zip(y_label, y_pred)):
 
-        y_score = prob_lab[i]
-
-        fpr, tpr, _ = roc_curve(y_ori, y_score[:, pos_lab], pos_label=pos_lab)
+        fpr, tpr, _ = roc_curve(y_label_cv, y_pred_cv)
         interp_tpr = np.interp(mean_fpr, fpr, tpr)
         interp_tpr[0] = 0
         tprs.append(interp_tpr)
         aucs_roc.append(auc(fpr, tpr))
 
-        precision, recall, _ = precision_recall_curve(
-            y_ori, y_score[:, pos_lab], pos_label=pos_lab
-        )
+        precision, recall, _ = precision_recall_curve(y_label_cv, y_pred_cv)
         index_rec = np.argsort(recall)
         interp_prec = np.interp(mean_recall, np.sort(recall), precision[index_rec])
         # interp_prec[0] = 1
@@ -87,7 +62,7 @@ def plot_graph_roc_pr_indexes(y_label: list, y_pred: list, name_model):
         ax[0].plot(
             mean_fpr,
             tprs[e],
-            label="ROC fold {} with AUC = {:.2f}".format(e, aucs_roc[e]),
+            label=f"ROC fold {e} with AUC = {aucs_roc[e]:.2f}",
             color=c,
             alpha=0.3,
             lw=1,
@@ -95,7 +70,7 @@ def plot_graph_roc_pr_indexes(y_label: list, y_pred: list, name_model):
         ax[1].plot(
             mean_recall,
             precs[e],
-            label="PR fold {} with AUC = {:.2f}".format(e, aucs_pr[e]),
+            label=f"PR fold {e} with AUC = {aucs_pr[e]:.2f}",
             color=c,
             alpha=0.3,
             lw=1,
@@ -104,7 +79,7 @@ def plot_graph_roc_pr_indexes(y_label: list, y_pred: list, name_model):
         ax[0].plot(
             mean_fpr,
             tpr_avg,
-            label=r"Mean ROC (AUC = %0.2f $\pm$ %0.2f)" % (mean_auc_roc, std_auc_roc),
+            label=rf"Mean ROC (AUC = {mean_auc_roc:.2f} $\pm$ {std_auc_roc:.2f})",
             color="b",
         )
     ax[0].fill_between(
@@ -117,13 +92,13 @@ def plot_graph_roc_pr_indexes(y_label: list, y_pred: list, name_model):
     )
     ax[0].set_xlabel("FPR")
     ax[0].set_ylabel("TPR")
-    ax[0].set_title(f"ROC curve for {index}")
+    # ax[0].set_title(f"ROC curve for {index}")
     ax[0].grid()
     ax[0].legend(loc="best")
     ax[1].plot(
         mean_recall,
         precision_avg,
-        label=r"Mean PR (AUC = %0.2f $\pm$ %0.2f)" % (mean_auc_pr, std_auc_pr),
+        label=rf"Mean PR (AUC = {mean_auc_pr:.2f} $\pm$ {std_auc_pr:.2f})",
         color="b",
     )
     ax[1].fill_between(
@@ -136,8 +111,81 @@ def plot_graph_roc_pr_indexes(y_label: list, y_pred: list, name_model):
     )
     ax[1].set_xlabel("Recall")
     ax[1].set_ylabel("Precision")
-    ax[1].set_title(f"PR curve for {index}")
+    # ax[1].set_title(f"PR curve for {index}")
     ax[1].grid()
     ax[1].legend(loc="best")
 
+    plt.show()
+
+
+def comparison_roc_pr_mean_curve(path_results, methods):
+    dict_results = {}
+    for method in methods:
+        name_file = f"proba_{method}.pkl"
+        path_file = os.path.join(path_results, name_file)
+        if os.path.isfile(path_file):
+            with open(path_file, "rb") as f:
+                dict_results[method] = pkl.load(f)
+        else:
+            print(f"file {path_file} not found")
+
+    fig, ax = plt.subplots(nrows=2, ncols=1, figsize=(10, 20))
+    color = iter(plt.cm.rainbow(np.linspace(0, 1, len(dict_results))))
+    for name_model, dict_proba in dict_results.items():
+        c = next(color)
+        mean_fpr = np.linspace(0, 1, 500)
+        mean_recall = np.linspace(0, 1, 500)
+        tprs = []
+        precs = []
+        aucs_roc = []
+        aucs_pr = []
+        y_pred = dict_proba["proba_class_1"]
+        y_label = dict_proba["label"]
+        for i, (y_label_cv, y_pred_cv) in enumerate(zip(y_label, y_pred)):
+
+            fpr, tpr, _ = roc_curve(y_label_cv, y_pred_cv)
+            interp_tpr = np.interp(mean_fpr, fpr, tpr)
+            interp_tpr[0] = 0
+            tprs.append(interp_tpr)
+            aucs_roc.append(auc(fpr, tpr))
+
+            precision, recall, _ = precision_recall_curve(y_label_cv, y_pred_cv)
+            index_rec = np.argsort(recall)
+            interp_prec = np.interp(mean_recall, np.sort(recall), precision[index_rec])
+            precs.append(interp_prec)
+            aucs_pr.append(auc(recall, precision))
+
+        precision_avg = np.mean(precs, axis=0)
+        mean_auc_pr = np.mean(aucs_pr)
+        std_auc_pr = np.std(aucs_pr)
+        tpr_avg = np.mean(tprs, axis=0)
+        mean_auc_roc = np.mean(aucs_roc)
+        std_auc_roc = np.std(aucs_roc)
+
+        ax[0].plot(
+            mean_fpr,
+            tpr_avg,
+            color=c,
+            label=f"Mean ROC curve {name_model} : AUC = {mean_auc_roc:.2f} +- {std_auc_roc:.2f}",
+        )
+        ax[1].plot(
+            mean_recall,
+            precision_avg,
+            color=c,
+            label=f"Mean PR curve {name_model}: AUC = {mean_auc_pr:.2f} +- {std_auc_pr:.2f}",
+        )
+
+    ax[0].plot([0, 1], [0, 1], "--k", label="Reference line")
+    ax[0].set_xlabel("False Positive Rate")
+    ax[0].set_ylabel("True Positive Rate")
+    ax[0].set_title("Testing mean ROC Curve for all indexes created ")
+    ax[0].legend(loc=4)
+    ax[0].grid()
+
+    ax[1].plot([0, 1], [0, 0], "--k", label="Reference line")
+    ax[1].set_xlabel("Recall")
+    ax[1].set_ylabel("Precision")
+    ax[1].set_title("Testing mean PR Curve for all indexes created ")
+    ax[1].legend(loc=4)
+    ax[1].grid()
     plt.show()
