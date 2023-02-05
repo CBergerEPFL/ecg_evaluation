@@ -27,11 +27,12 @@ FILEPATH = os.path.dirname(os.path.realpath(__file__))
 # ROOTPATH = os.path.dirname(FILEPATH)
 sys.path.append(FILEPATH)
 from utils_path import results_path
+from utils_type import Results_Data
 
 seed = 0
 
 
-def metrics_cv(y_label: list, y_pred: list, save_name, t_used=None):
+def metrics_cv(results: Results_Data, save_name, t_used=None):
 
     """
     Function that calculate Metrics for labelled dataset obtained after Cross Validation. Metrics Calculated :
@@ -64,6 +65,8 @@ def metrics_cv(y_label: list, y_pred: list, save_name, t_used=None):
         "mcc",
         "T",
     ]
+    y_pred = results.proba_unacceptable
+    y_label = results.label
     dict_metrics = dict([(key, np.empty([len(y_label)])) for key in list_metrics])
 
     for i, (y_label_cv, y_pred_cv) in enumerate(zip(y_label, y_pred)):

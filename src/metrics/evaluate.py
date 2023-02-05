@@ -13,6 +13,7 @@ sys.path.append(os.path.join(ROOTPATH))
 from shared_utils.utils_data import feature_checker, extract_index_label
 from shared_utils.utils_evaluation import metrics_cv
 from shared_utils.utils_path import results_path
+from shared_utils.utils_type import Results_Data
 
 
 def evaluate_index(
@@ -32,20 +33,12 @@ def evaluate_index(
             "The number of samples in the index and the number of labels are not equal"
         )
     np_prob = np.c_[np_index, 1 - np_index, df_label.to_numpy()]
+    results = Results_Data([np_prob[:, 1]], [np_prob[:, -1]])
     if save_name is not None:
-        dict_results = {
-            "proba_class_0": [np_prob[:, 0]],
-            "proba_class_1": [np_prob[:, 1]],
-            "label": [np_prob[:, -1]],
-        }
-        with open(
-            os.path.join(results_path, "proba_methods", f"proba_{save_name}.pkl"), "wb"
-        ) as f:
-            pkl.dump(dict_results, f)
+        results.dump_to_file(save_name)
 
     metrics_cv(
-        dict_results["label"],
-        dict_results["proba_class_1"],
+        results,
         save_name,
         t_used=thres_metric,
     )

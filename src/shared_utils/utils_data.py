@@ -181,6 +181,6 @@ def extract_index_label(ds_data, required_index=None):
         required_index = df_X.columns.tolist()
 
     if "HR" in required_index:
-        df_X.loc[:] = HR_metrics
+        df_X.loc[:, "HR"] = HR_metrics
 
     return df_X, df_y

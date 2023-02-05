@@ -108,9 +108,9 @@ class Logit_binary(LogisticRegression):
             if X[0, self.index] == 1:
                 y_pred[:, :] = super().predict_proba(X)
             else:
-                y_pred[0, 0] = 1
+                y_pred[0, 1] = 1
         else:
             y_pred[indexes_HR, :] = super().predict_proba(X_H)
-            y_pred[indexes_noRH, 0] = 1
+            y_pred[indexes_noRH, 1] = 1
 
         return y_pred
