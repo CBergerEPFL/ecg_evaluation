@@ -21,6 +21,7 @@ dependencies = [
     "petastorm>=0.12.1",
     "numba>=0.56.4",
     "skfeature-chappers>=1.1.0",
+    "shap>=0.41.0",
 ]
 requires-python = ">=3.10"
 license = {text = "MIT"}
