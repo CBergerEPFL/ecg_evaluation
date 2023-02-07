@@ -145,16 +145,21 @@ def feature_checker(df_features: pd.DataFrame) -> bool:
     return True
 
 
-def extract_index_label(ds_data, required_index=None):
+def extract_index_label(ds_data, required_index=None, aggregation_method="mean"):
     """Extract index and label from xarray dataset
 
     Args:
         ds_data (_type_): Data in xarray format.
         required_index (list, optional): List of index to extract.
+        aggregation_method (str, optional): Aggregation method to use. Defaults to "mean".
+            One of ["mean", "min", "max", "median", "None"]
 
     Returns:
         df_X (pd.DataFrame):dataframe with requested index
     """
+
+    if not isinstance(required_index, list):
+        required_index = [required_index]
 
     ds_filtered = ds_data.where(ds_data.data_quality != "unlabeled").dropna(dim="id")
 
@@ -170,7 +175,17 @@ def extract_index_label(ds_data, required_index=None):
         HR_index = metrics_names.index("HR")
         HR_metrics = np_metrics[:, :, HR_index].min(axis=1)
 
-    X = np_metrics.mean(axis=1)
+    if aggregation_method == "mean":
+        X = np_metrics.mean(axis=1)
+    elif aggregation_method == "min":
+        X = np_metrics.min(axis=1)
+    elif aggregation_method == "max":
+        X = np_metrics.max(axis=1)
+    elif aggregation_method == "median":
+        X = np.median(np_metrics, axis=1)
+    elif aggregation_method is not None:
+        raise ValueError("Aggregation method not supported")
+
     X[:, HR_index] = HR_metrics
     df_X = pd.DataFrame(X, columns=metrics_names)
     df_y = pd.DataFrame(np_label, columns=["y"])

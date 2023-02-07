@@ -11,14 +11,12 @@ from utils_path import results_path
 
 @dataclass
 class Results_Data:
-    proba_unacceptable: list[np.array]
-    label: list[np.array]
+    model: str
+    hp = None
 
     def __post_init__(self):
-        self.dict_results = {
-            "proba_unacceptable": self.proba_unacceptable,
-            "label": self.label,
-        }
+        self._proba_unacceptable = []
+        self._label = []
 
     def dump_to_file(self, save_name):
         with open(
@@ -26,3 +24,18 @@ class Results_Data:
             "wb",
         ) as f:
             pkl.dump(self.dict_results, f)
+
+    @property
+    def dict_results(self):
+        dict_results = {
+            "model": self.model,
+            "proba_unacceptable": self._proba_unacceptable,
+            "label": self._label,
+        }
+        if self.hp:
+            dict_results["hp"] = self.hp
+        return dict_results
+
+    def append_results(self, proba_unacceptable: np.array, label: np.array):
+        self._proba_unacceptable.append(proba_unacceptable)
+        self._label.append(label)

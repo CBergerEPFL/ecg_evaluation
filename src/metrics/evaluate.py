@@ -19,10 +19,11 @@ from shared_utils.utils_type import Results_Data
 def evaluate_index(
     df_index: pd.DataFrame, df_label: pd.DataFrame, save_name=None, thres_metric=None
 ):
-    if df_index.ndim > 1:
+    if df_index.shape[1] > 1:
         raise ValueError(
             "One index is evaluated at each pass. df_index must have only one column"
         )
+
     feature_checker(df_index)
     np_index = df_index.to_numpy()
     # Index are defined as 1 = acceptable and 0 = not acceptable,
@@ -33,12 +34,13 @@ def evaluate_index(
             "The number of samples in the index and the number of labels are not equal"
         )
     np_prob = np.c_[np_index, 1 - np_index, df_label.to_numpy()]
-    results = Results_Data([np_prob[:, 1]], [np_prob[:, -1]])
+    data_results = Results_Data(save_name)
+    data_results.append_results(np_prob[:, 1], np_prob[:, -1])
     if save_name is not None:
-        results.dump_to_file(save_name)
+        data_results.dump_to_file(save_name)
 
     metrics_cv(
-        results,
+        data_results.dict_results,
         save_name,
         t_used=thres_metric,
     )
