@@ -15,8 +15,11 @@ from shared_utils.utils_path import results_path
 
 def main():
     # parse arguments
-
+    # list_features  = ["Corr_interlead", "SNRECG", "HR", "TSD"]
+    # list_features = ["Corr_interlead", "SNRECG" ,"HR", "Corr_intralead", "wPMF"]
     # list_features = ["Corr_interlead", "HR", "SNRECG", "Corr_intralead"]
+
+    print(results_path)
     list_features = [
         "Corr_interlead",
         "Corr_intralead",
@@ -30,12 +33,14 @@ def main():
     input_data_path = os.path.join(results_path, "quality_metrics.nc")
     train_model(
         input_data_path,
-        model_type="lgbm",
-        # model_type="logistic",
+        path_results=results_path,
+        # model_type="lgbm",
+        model_type="logistic",
         list_features=list_features,
+        feature_selection="L2_regularization",
         nb_fold=5,
-        # save_name="JMI_MI_selection_method",
-        save_name="lgbm",
+        save_name="L2_reg_logistic"
+        # save_name="lgbm",
     )
 
 

@@ -139,7 +139,7 @@ def comparison_roc_pr_mean_curve(path_results, methods):
         precs = []
         aucs_roc = []
         aucs_pr = []
-        y_pred = dict_proba["proba_class_1"]
+        y_pred = dict_proba["proba_unacceptable"]
         y_label = dict_proba["label"]
         for i, (y_label_cv, y_pred_cv) in enumerate(zip(y_label, y_pred)):
 
@@ -166,13 +166,13 @@ def comparison_roc_pr_mean_curve(path_results, methods):
             mean_fpr,
             tpr_avg,
             color=c,
-            label=f"Mean ROC curve {name_model} : AUC = {mean_auc_roc:.2f} +- {std_auc_roc:.2f}",
+            label=f"{name_model} : AUC = {mean_auc_roc:.2f} +- {std_auc_roc:.2f}",
         )
         ax[1].plot(
             mean_recall,
             precision_avg,
             color=c,
-            label=f"Mean PR curve {name_model}: AUC = {mean_auc_pr:.2f} +- {std_auc_pr:.2f}",
+            label=f"{name_model}: AUC = {mean_auc_pr:.2f} +- {std_auc_pr:.2f}",
         )
 
     ax[0].plot([0, 1], [0, 1], "--k", label="Reference line")

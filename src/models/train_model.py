@@ -22,7 +22,11 @@ from shared_utils.utils_type import Results_Data
 
 from .components.custom_logit import Logit_binary
 from .components.custom_loss import sigmoid
-from .components.features_selection import backward_model_selection
+from .components.features_selection import (
+    backward_model_selection,
+    backward_model_selection_MI_JMI,
+    model_selection_L2reg,
+)
 from models.components.model_parameters import get_model_parameters
 
 seed = 0
@@ -30,6 +34,7 @@ seed = 0
 
 def train_model(
     input_data_path,
+    path_results="",
     model_type="lgbm",
     list_features=None,
     feature_selection=None,
@@ -54,6 +59,19 @@ def train_model(
     if feature_selection is not None:
         if feature_selection == "backward_selection":
             list_features = backward_model_selection(df_X_mean, df_y)
+        elif feature_selection == "backward_selection_MI_JMI":
+            if not path_results or not os.path.exists(
+                os.path.join(path_results, "evaluation_metrics")
+            ):
+                raise AttributeError(
+                    "Feature selection using MI/JMI needs indexes' threshold"
+                )
+            else:
+                list_features = backward_model_selection_MI_JMI(
+                    df_X_mean, df_y, os.path.join(path_results, "evaluation_metrics")
+                )
+        elif feature_selection == "L2_regularization":
+            list_features = model_selection_L2reg(df_X_mean, df_y)
         else:
             raise ValueError("Feature selection method not recognized")
 
@@ -65,8 +83,8 @@ def train_model(
         X = df_X_mean[list_features].values
         y = df_y.values.ravel()
         kwargs["Hindex"] = Hindex
-    elif model_type == "lgbm":
 
+    elif model_type == "lgbm":
         path_file = os.path.join(results_path, "hp_lgbm.pkl")
         with open(path_file, "rb") as f:
             param_hp = pkl.load(f)
@@ -114,7 +132,8 @@ def pick_model(model_type, **kwargs):
 def perform_cv_evaluation(X, y, model_type, nb_fold, save_name, **kwargs):
     cv = StratifiedKFold(n_splits=nb_fold, random_state=seed, shuffle=True)
     data_results = Results_Data(model_type)
-    kwargs["hp"].pop("num_iterations")
+    if kwargs.get("hp"):
+        kwargs["hp"].pop("num_iterations")
     for i, (train, test) in enumerate(cv.split(X, y)):
         print(f"Fold {i}")
         model = pick_model(model_type, **kwargs)

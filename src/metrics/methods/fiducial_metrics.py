@@ -4,11 +4,30 @@ from ecgdetectors import Detectors
 
 
 def get_time_axis(sign_length, fs):
+    """
+    Convert time axis of signal into seconds given the sampling frequency
+
+    Args:
+        sign_length (int): Length of the signal considered (if multiple signals, all signals mut have the same length)
+        fs (int): Sampling frequency of the signal (if multiple signals, all signal must have the same sampling frequency)
+
+    Returns:
+        x (numpy array): numpy array of signal length with units in seconds
+    """
     x = np.linspace(0, int(sign_length / fs), sign_length)
     return x
 
 
 def kurto_score(arr_signal, **kwargs):
+    """
+    Calculate Kurtosis score for signal quality assessment
+
+    Args:
+        arr_signal (numpy array): Numpy array containing all the signal (expected shape : [num_feature (ex : #lead),signal_length])
+
+    Returns:
+        resutls (1D numpy array): Numpy array containing kurtosis score for all signal (of size num_feature)
+    """
     result = np.array([])
     for i in range(arr_signal.shape[0]):
         K = kurtosis(arr_signal[i, :])
@@ -20,6 +39,17 @@ def kurto_score(arr_signal, **kwargs):
 
 def pqrst_template_extractor(ecg_signal, rpeaks):
     ##Adapted from the Biosspy function _extract_heartbeats
+    """
+    For ECG signal, extract PQRST complex. Adapted from the Biosspy function _extract_heartbeats
+
+    Args:
+        ecg_signal (numpy array): Numpy array containing the ECG signal
+        rpeaks (numpy array): Numpy array containing the index location of the r peaks in the lead.
+
+    Returns:
+        template (numpy array): Numpy array containing all the PQRST complex from the lead.
+        newR (numpy array) : Numpy array containing the index location of all Rpeaks in the signal (recalculated for comparison)
+    """
     R = np.sort(rpeaks)
     length = len(ecg_signal)
     templates = []
@@ -43,6 +73,17 @@ def pqrst_template_extractor(ecg_signal, rpeaks):
 
 
 def morph_score(signals, fs, **kwargs):
+    """
+
+    Calculate the intralead correlation coefficient index for signal quality
+
+    Args:
+        signals (Numpy array): Numpy array containing all the signal (expected shape : [num_feature (ex : #lead),signal_length])
+        fs (int): Sampling frequency of the signla (if multiple signals, all signal must have the same sampling frequency)
+
+    Returns:
+        QRS_arr(Numpy array): 1D numpy array containing the index for each lead (shape [num_feature])
+    """
     QRS_arr = np.array([])
     detect = Detectors(fs)
     for i in range(signals.shape[0]):
@@ -87,6 +128,17 @@ def morph_score(signals, fs, **kwargs):
 
 
 def flatline_score(signals, fs, **norm):
+    """
+
+    Calculate Flatine score index for signal quality assessment
+
+    Args:
+        signals (Numpy array): Numpy array containing all the signal (expected shape : [num_feature (ex : #lead),signal_length])
+        fs (int): Sampling frequency of the signla (if multiple signals, all signal must have the same sampling frequency)
+
+    Returns:
+        flat_arr(Numpy array): 1D numpy array containing the index for each lead (shape [num_feature])
+    """
     flat_arr = np.array([], dtype=np.float64)
     for i in range(signals.shape[0]):
         cond = np.where(np.diff(signals[i, :].copy()) != 0.0, np.nan, True)
@@ -100,6 +152,16 @@ def flatline_score(signals, fs, **norm):
 
 
 def corr_lead_score(signals, **kwargs):
+    """
+
+    Calculate the Interlead Correlation coefficient for signal quality
+
+    Args:
+        signals (Numpy array): Numpy array containing all the signal (expected shape : [num_feature (ex : #lead),signal_length])
+
+    Returns:
+        results (Numpy array): 1D numpy array containing the index for each lead (shape [num_feature])
+    """
     results = np.zeros(signals.shape[0])
     M = np.corrcoef(signals)
     if M.size == 1:
@@ -117,6 +179,17 @@ def corr_lead_score(signals, **kwargs):
 
 
 def HR_index_calculator(signals, fs, **kwargs):
+    """
+
+    Calculate Heart rate presence for signal quality
+
+    Args:
+        signals (Numpy array): Numpy array containing all the signal (expected shape : [num_feature (ex : #lead),signal_length])
+        fs (int): Sampling frequency of the signla (if multiple signals, all signal must have the same sampling frequency)
+
+    Returns:
+        mean_RR_interval (Numpy array): 1D numpy array containing the index for each lead (shape [num_feature]) (binary array)
+    """
     mean_RR_interval = np.zeros(signals.shape[0])
     x = get_time_axis(signals.shape[1], fs)
     detect = Detectors(fs)

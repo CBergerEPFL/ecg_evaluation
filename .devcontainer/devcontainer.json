@@ -1,8 +1,8 @@
 {
     "name": "Python 3",
     "runArgs": [
-        "--env-file",
-        ".devcontainer/devcontainer.env"
+        // "--env-file",
+        // ".devcontainer/devcontainer.env"
     ],
     "build": {
         "dockerfile": "Dockerfile",
