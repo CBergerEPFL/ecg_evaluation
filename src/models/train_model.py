@@ -24,8 +24,9 @@ from .components.custom_logit import Logit_binary
 from .components.custom_loss import sigmoid
 from .components.features_selection import (
     backward_model_selection,
-    backward_model_selection_MI_JMI,
+    JMI_score,
     model_selection_L2reg,
+    hjmi_selection,
 )
 from models.components.model_parameters import get_model_parameters
 
@@ -59,19 +60,12 @@ def train_model(
     if feature_selection is not None:
         if feature_selection == "backward_selection":
             list_features = backward_model_selection(df_X_mean, df_y)
-        elif feature_selection == "backward_selection_MI_JMI":
-            if not path_results or not os.path.exists(
-                os.path.join(path_results, "evaluation_metrics")
-            ):
-                raise AttributeError(
-                    "Feature selection using MI/JMI needs indexes' threshold"
-                )
-            else:
-                list_features = backward_model_selection_MI_JMI(
-                    df_X_mean, df_y, os.path.join(path_results, "evaluation_metrics")
-                )
+        elif feature_selection == "JMI_score":
+            list_features = JMI_score(df_X_mean, df_y)
         elif feature_selection == "L2_regularization":
             list_features = model_selection_L2reg(df_X_mean, df_y)
+        elif feature_selection == "HJMI":
+            list_features = hjmi_selection(df_X_mean, df_y)
         else:
             raise ValueError("Feature selection method not recognized")
 

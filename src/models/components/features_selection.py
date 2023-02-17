@@ -2,9 +2,16 @@ import numpy as np
 import statsmodels.api as sm
 import pandas as pd
 import os
-from skfeature.function.information_theoretical_based import LCSI
-from sklearn.feature_selection import SelectFromModel
+from sklearn.feature_selection import SelectFromModel, mutual_info_regression
 from sklearn.linear_model import LogisticRegression
+from skfeature.utility.entropy_estimators import midd, cmidd
+from skfeature.function.information_theoretical_based.LCSI import lcsi
+import sys
+import matplotlib.pyplot as plt
+from scipy import stats
+
+sys.path.append(os.path.join(os.getcwd(), ".."))
+from kneed import KneeLocator
 
 
 def backward_model_selection(X, y, threshold_out=0.001):
@@ -25,53 +32,13 @@ def backward_model_selection(X, y, threshold_out=0.001):
     return initial_feature_set
 
 
-def backward_model_selection_MI_JMI(X, y, path_result, threshold_out=0.5):
+def JMI_score(X, y):
     initial_feature_set = list(X.columns.values)
-    dic_T = {}
-    for i in initial_feature_set:
-        f = pd.read_csv(os.path.join(path_result, f"{i}.csv"))
-        dic_T[i] = f.loc[len(f.index) - 1, "mean"]
-    X_dis = discretize_data(X, dic_T)
-    F, JMI, MI = jmi(X_dis, y)
+    X_dis = discretize_data(X)
+    F, _, _ = lcsi(X_dis, y.values.ravel(), function_name="JMI", n_selected_features=4)
     F = f7(F)
-    JMI = f7(JMI)
-    MI = f7(MI)
-    if len(F) != len(MI):
-        MI = MI[:-1]
-    if len(F) != len(JMI):
-        JMI = JMI[:-1]
-    min_mi = np.min(MI)
-    min_jmi = np.min(JMI)
-    min_arg = F[-1]
-    min_arg_name = initial_feature_set[min_arg]
-
-    while min_mi <= threshold_out and min_jmi <= threshold_out:
-        initial_feature_set.remove(min_arg_name)
-        X_dis = np.delete(X_dis, min_arg, axis=1)
-        F, JMI, MI = jmi(X_dis, y)
-        F = f7(F)
-        JMI = f7(JMI)
-        MI = f7(MI)
-        if len(F) != len(MI):
-            MI = MI[:-1]
-        if len(F) != len(JMI):
-            JMI = JMI[:-1]
-        min_mi = np.min(MI)
-        min_jmi = np.min(JMI)
-        min_arg = F[-1]
-        min_arg_name = initial_feature_set[min_arg]
-
-    ##Save the MI JMI results in csv file, in folder name (MI JMI score):
-    folder_path = os.path.join(os.path.join(path_result, ".."), "JMI_MI_score")
-    if not os.path.exists(folder_path):
-        os.makedirs(folder_path)
-    jmimi_dataframe = pd.DataFrame(
-        index=np.array(initial_feature_set)[F], columns=["JMI", "MI"]
-    )
-    jmimi_dataframe["JMI"] = JMI
-    jmimi_dataframe["MI"] = MI
-    jmimi_dataframe.to_csv(os.path.join(folder_path, "jmi_mi_selection.csv"))
-    return initial_feature_set
+    S = [initial_feature_set[i] for i in F]
+    return S
 
 
 def model_selection_L2reg(X, y):
@@ -102,49 +69,112 @@ def results_summary_to_dataframe(results):
     return results_df
 
 
-def jmi(X, y, **kwargs):
-    """
-    This function implements the JMI feature selection
-    Input
-    -----
-    X: {numpy array}, shape (n_samples, n_features)
-        input data, guaranteed to be discrete
-    y: {numpy array}, shape (n_samples,)
-        input class labels
-    kwargs: {dictionary}
-        n_selected_features: {int}
-            number of features to select
-    Output
-    ------
-    F: {numpy array}, shape (n_features,)
-        index of selected features, F[0] is the most important feature
-    J_CMI: {numpy array}, shape: (n_features,)
-        corresponding objective function value of selected features
-    MIfy: {numpy array}, shape: (n_features,)
-        corresponding mutual information between selected features and response
-    Reference
-    ---------
-    Brown, Gavin et al. "Conditional Likelihood Maximisation: A Unifying Framework for Information Theoretic Feature Selection." JMLR 2012.
-    """
-    if "n_selected_features" in kwargs.keys():
-        n_selected_features = kwargs["n_selected_features"]
-        F, J_CMI, MIfy = LCSI.lcsi(
-            X, y, function_name="JMI", n_selected_features=n_selected_features
-        )
-    else:
-        F, J_CMI, MIfy = LCSI.lcsi(X, y, function_name="JMI")
-    return F, J_CMI, MIfy
+def hjmi_selection(X, y, max_iteration=20, print_plot=True):
+
+    select_features = []
+    collect_hjmi = []
+    diff_m = []
+    X_dis = discretize_data(X)
+    initial_feature_set = list(X.columns.values)
+    j_h = 0
+    jmi = np.zeros([len(initial_feature_set)])
+    for i in range(max_iteration):
+        for p in range(len(initial_feature_set)):
+            if initial_feature_set[p] in select_features:
+                continue
+            JMI_1 = midd(X_dis[:, p], y.values.ravel())
+            JMI_2 = 0
+            for j in range(len(select_features)):
+                tmp1 = midd(X_dis[:, p], X_dis[:, j])
+                tmp2 = cmidd(X_dis[:, p], X_dis[:, j], y.values.ravel())
+                JMI_2 = JMI_2 + tmp1 - tmp2
+            jmi[p] = j_h + JMI_1
+            if i > 1:
+                jmi[p] = jmi[p] - (JMI_2) / (i - 1)
+        if i == 0:
+            j_h = np.max(jmi)
+            hjmi = j_h
+            ind = np.argmax(jmi)
+            select_features.append(initial_feature_set[ind])
+            collect_hjmi.append(j_h)
+
+        else:  # ((j_h-hjmi)/hjmi)>1e-10)
+            j_h = np.max(jmi)
+            ind = np.argmax(jmi)
+            if (j_h - hjmi) / (hjmi) > 0.03 and len(select_features) < len(
+                initial_feature_set
+            ):
+                print((j_h - hjmi) / (hjmi))
+                diff_m.append((j_h - hjmi) / (hjmi))
+                hjmi = j_h
+                select_features.append(initial_feature_set[ind])
+                collect_hjmi.append(hjmi)
+            else:
+                break
+    if print_plot:
+        elbow_plot(diff_m)
+    return select_features, collect_hjmi
 
 
-def discretize_data(X_data, dico_T):
+def elbow_plot(elbow):
+    n_feat = range(1, len(elbow) + 1)
+    elbow_1 = KneeLocator(n_feat, elbow, curve="convex", direction="decreasing")
+    fig, ax = plt.subplots()
+
+    ax.set_xlabel("number of features added in selection")
+    ax.set_ylabel("Historical JMI value")
+    ax.plot(n_feat, elbow, "xb-")
+    ax.grid()
+    ax.vlines(
+        elbow_1.knee, plt.ylim()[0], plt.ylim()[1], linestyles="dashed", color="k"
+    )
+    ax.set_title("Elbow plot for finding optimal threshold")
+
+
+def discretize_data(X_data):
+    ##Calculating number of bins necessary :
     X_dis = np.zeros_like(X_data.values)
     for j in X_data.columns.values:
         i = list(X_data.columns.values).index(j)
-        if j == "HR":
+        if j == "HR" or j == "der_label":
             X_dis[:, i] = X_data[j]
         else:
-            X_dis[:, i] = np.digitize(X_data[j], bins=[dico_T[j]])
+            X_f = X_data[j].values.copy()
+            Dx = freedman_diaconis(X_f, returnas="bins")
+            new_ref = np.linspace(0, 1, Dx)
+            ind = np.digitize(X_f, bins=np.linspace(0, 1, Dx))
+            X_dis[:, i] = [new_ref[i] for i in ind]
     return X_dis
+
+
+def freedman_diaconis(data, returnas="width"):
+    """
+    Use Freedman Diaconis rule to compute optimal histogram bin width.
+    ``returnas`` can be one of "width" or "bins", indicating whether
+    the bin width or number of bins should be returned respectively.
+
+
+    Parameters
+    ----------
+    data: np.ndarray
+        One-dimensional array.
+
+    returnas: {"width", "bins"}
+        If "width", return the estimated width for each histogram bin.
+        If "bins", return the number of bins suggested by rule.
+    """
+    data = np.asarray(data, dtype=np.float_)
+    IQR = stats.iqr(data, rng=(25, 75), scale="raw", nan_policy="omit")
+    N = data.size
+    bw = (2 * IQR) / np.power(N, 1 / 3)
+
+    if returnas == "width":
+        result = bw
+    else:
+        datmin, datmax = data.min(), data.max()
+        datrng = datmax - datmin
+        result = int(np.ceil((datrng / bw) + 1))
+    return result
 
 
 def f7(seq):

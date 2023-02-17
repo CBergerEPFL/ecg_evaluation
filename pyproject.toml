@@ -22,6 +22,9 @@ dependencies = [
     "numba>=0.56.4",
     "skfeature-chappers>=1.1.0",
     "shap>=0.41.0",
+    "seaborn>=0.12.2",
+    "bottleneck>=1.3.6",
+    "kneed>=0.8.2",
 ]
 requires-python = ">=3.10"
 license = {text = "MIT"}

@@ -15,21 +15,22 @@ from shared_utils.utils_path import results_path
 
 def main():
     # parse arguments
-    # list_features  = ["Corr_interlead", "SNRECG", "HR", "TSD"]
+    # list_features  = ["Corr_interlead", "Corr_intralead", "TSD"]
     # list_features = ["Corr_interlead", "SNRECG" ,"HR", "Corr_intralead", "wPMF"]
-    # list_features = ["Corr_interlead", "HR", "SNRECG", "Corr_intralead"]
+    # list_features = ["Corr_interlead", "HR", "wPMF", "TSD"]
+    list_features = ["Corr_interlead", "TSD", "Corr_intralead", "SNRECG"]
 
-    print(results_path)
-    list_features = [
-        "Corr_interlead",
-        "Corr_intralead",
-        "wPMF",
-        "SNRECG",
-        "HR",
-        # "Kurtosis",
-        "Flatline",
-        "TSD",
-    ]
+    # print(results_path)
+    # list_features = [
+    #     "Corr_interlead",
+    #     "Corr_intralead",
+    #     "wPMF",
+    #     "SNRECG",
+    #     "HR",
+    #     # "Kurtosis",
+    #     "Flatline",
+    #     "TSD",
+    # ]
     input_data_path = os.path.join(results_path, "quality_metrics.nc")
     train_model(
         input_data_path,
@@ -37,9 +38,9 @@ def main():
         # model_type="lgbm",
         model_type="logistic",
         list_features=list_features,
-        feature_selection="L2_regularization",
+        # feature_selection="L2_regularization",
         nb_fold=5,
-        save_name="L2_reg_logistic"
+        save_name="JMI_n4_selection"
         # save_name="lgbm",
     )
 
