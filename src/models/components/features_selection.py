@@ -101,10 +101,9 @@ def hjmi_selection(X, y, max_iteration=20, print_plot=True):
         else:  # ((j_h-hjmi)/hjmi)>1e-10)
             j_h = np.max(jmi)
             ind = np.argmax(jmi)
-            if (j_h - hjmi) / (hjmi) > 0.03 and len(select_features) < len(
+            if (j_h - hjmi) / (hjmi) > 0.13 and len(select_features) < len(
                 initial_feature_set
             ):
-                print((j_h - hjmi) / (hjmi))
                 diff_m.append((j_h - hjmi) / (hjmi))
                 hjmi = j_h
                 select_features.append(initial_feature_set[ind])
@@ -117,11 +116,11 @@ def hjmi_selection(X, y, max_iteration=20, print_plot=True):
 
 
 def elbow_plot(elbow):
-    n_feat = range(1, len(elbow) + 1)
+    n_feat = range(2, len(elbow) + 2)
     elbow_1 = KneeLocator(n_feat, elbow, curve="convex", direction="decreasing")
     fig, ax = plt.subplots()
 
-    ax.set_xlabel("number of features added in selection")
+    ax.set_xlabel("number of features in the subset")
     ax.set_ylabel("Historical JMI value")
     ax.plot(n_feat, elbow, "xb-")
     ax.grid()

@@ -129,7 +129,7 @@ def comparison_roc_pr_mean_curve(path_results, methods):
         else:
             print(f"file {path_file} not found")
 
-    fig, ax = plt.subplots(nrows=2, ncols=1, figsize=(10, 20))
+    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(20, 10))
     color = iter(plt.cm.rainbow(np.linspace(0, 1, len(dict_results))))
     for name_model, dict_proba in dict_results.items():
         c = next(color)
