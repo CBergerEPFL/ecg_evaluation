@@ -17,8 +17,8 @@ def main():
     # parse arguments
     # list_features  = ["Corr_interlead", "Corr_intralead", "TSD"]
     # list_features = ["Corr_interlead", "SNRECG" ,"HR", "Corr_intralead", "wPMF"]
-    # list_features = ["Corr_interlead", "HR", "wPMF", "TSD"]
-    list_features = ["Corr_interlead", "TSD", "Corr_intralead", "SNRECG"]
+    list_features = ["Corr_interlead", "HR", "wPMF", "TSD"]
+    # list_features = ["Corr_interlead", "TSD", "Corr_intralead", "SNRECG"]
 
     # print(results_path)
     # list_features = [
@@ -40,7 +40,7 @@ def main():
         list_features=list_features,
         # feature_selection="L2_regularization",
         nb_fold=5,
-        save_name="JMI_n4_selection"
+        save_name="backward_pval_selection"
         # save_name="lgbm",
     )
 

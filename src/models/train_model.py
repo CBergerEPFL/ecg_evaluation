@@ -152,6 +152,7 @@ def perform_cv_evaluation(X, y, model_type, nb_fold, save_name, **kwargs):
 
     if save_name is not None:
         data_results.dump_to_file(save_name)
+        # pkl.dump(model,open(save_name+".sav","wb"))
 
     metrics_cv(
         data_results.dict_results,
