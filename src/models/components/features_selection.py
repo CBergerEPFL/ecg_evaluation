@@ -14,18 +14,24 @@ sys.path.append(os.path.join(os.getcwd(), ".."))
 from kneed import KneeLocator
 
 
-def backward_model_selection(X, y, threshold_out=0.001):
+def backward_model_selection(X, y):
     initial_feature_set = list(X.columns.values)
     logit_model = sm.Logit(y.values.ravel(), X)
     result = logit_model.fit()
     sumsum = results_summary_to_dataframe(result)
+    bi_1 = result.aic
+    bi_0 = result.aic + 1
+    print(result.summary())
     list_pval = np.array(sumsum["pvals"].values)
     max_pval = sumsum["pvals"].max()
-    while max_pval >= threshold_out:
+    while bi_0 >= bi_1:
         idx_maxPval = np.array(initial_feature_set)[list_pval == max_pval]
         initial_feature_set.remove(idx_maxPval)
-        logit_mod = sm.Logit(y, X[initial_feature_set])
+        logit_mod = sm.Logit(y.values.ravel(), X[initial_feature_set])
         result = logit_mod.fit()
+        bi_0 = bi_1
+        bi_1 = result.aic
+        print(result.summary())
         sumsum = results_summary_to_dataframe(result)
         max_pval = sumsum["pvals"].max()
         list_pval = np.array(sumsum["pvals"].values)
@@ -35,7 +41,7 @@ def backward_model_selection(X, y, threshold_out=0.001):
 def JMI_score(X, y):
     initial_feature_set = list(X.columns.values)
     X_dis = discretize_data(X)
-    F, _, _ = lcsi(X_dis, y.values.ravel(), function_name="JMI", n_selected_features=4)
+    F, _, _ = lcsi(X_dis, y.values.ravel(), function_name="JMI", n_selected_features=3)
     F = f7(F)
     S = [initial_feature_set[i] for i in F]
     return S
@@ -69,7 +75,7 @@ def results_summary_to_dataframe(results):
     return results_df
 
 
-def hjmi_selection(X, y, max_iteration=20, print_plot=True):
+def hjmi_selection(X, y, max_iteration=20, print_plot=False):
 
     select_features = []
     collect_hjmi = []
@@ -101,7 +107,7 @@ def hjmi_selection(X, y, max_iteration=20, print_plot=True):
         else:  # ((j_h-hjmi)/hjmi)>1e-10)
             j_h = np.max(jmi)
             ind = np.argmax(jmi)
-            if (j_h - hjmi) / (hjmi) > 0.03 and len(select_features) < len(
+            if (j_h - hjmi) / (hjmi) > 0.13 and len(select_features) < len(
                 initial_feature_set
             ):
                 diff_m.append((j_h - hjmi) / (hjmi))
