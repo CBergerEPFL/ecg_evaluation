@@ -79,7 +79,7 @@ def train_model(
         kwargs["Hindex"] = Hindex
 
     elif model_type == "lgbm":
-        path_file = os.path.join(results_path, "hp_lgbm.pkl")
+        path_file = os.path.join(results_path, "hp_lgbm_best.pkl")
         with open(path_file, "rb") as f:
             param_hp = pkl.load(f)
 

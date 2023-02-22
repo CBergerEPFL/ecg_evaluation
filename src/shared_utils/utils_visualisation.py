@@ -8,7 +8,7 @@ from sklearn.metrics import auc, precision_recall_curve, roc_curve
 
 
 def plot_roc_pr_curve(y_label: list, y_pred: list):
-
+    plt.rcParams.update({"font.size": 22})
     k_cv = len(y_label)
     fig, ax = plt.subplots(nrows=2, ncols=1, figsize=(10, 15))
     color = iter(plt.cm.rainbow(np.linspace(0, 1, k_cv)))
@@ -114,11 +114,12 @@ def plot_roc_pr_curve(y_label: list, y_pred: list):
     # ax[1].set_title(f"PR curve for {index}")
     ax[1].grid()
     ax[1].legend(loc="best")
-
     plt.show()
 
 
 def comparison_roc_pr_mean_curve(path_results, methods):
+    plt.rcParams.update({"font.size": 32})
+    plt.rcParams["legend.fontsize"] = 32
     dict_results = {}
     for method in methods:
         name_file = f"proba_{method}.pkl"
@@ -129,7 +130,8 @@ def comparison_roc_pr_mean_curve(path_results, methods):
         else:
             print(f"file {path_file} not found")
 
-    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(20, 10))
+    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(40, 20), constrained_layout=True)
+    fig.tight_layout(w_pad=5)
     color = iter(plt.cm.rainbow(np.linspace(0, 1, len(dict_results))))
     for name_model, dict_proba in dict_results.items():
         c = next(color)
@@ -179,13 +181,13 @@ def comparison_roc_pr_mean_curve(path_results, methods):
     ax[0].set_xlabel("False Positive Rate")
     ax[0].set_ylabel("True Positive Rate")
     ax[0].set_title("Testing mean ROC Curve for all indexes created ")
-    ax[0].legend(loc=4)
+    ax[0].legend(loc="lower center")
     ax[0].grid()
 
     ax[1].plot([0, 1], [0, 0], "--k", label="Reference line")
     ax[1].set_xlabel("Recall")
     ax[1].set_ylabel("Precision")
     ax[1].set_title("Testing mean PR Curve for all indexes created ")
-    ax[1].legend(loc=4)
+    ax[1].legend(loc="lower center")
     ax[1].grid()
     plt.show()
