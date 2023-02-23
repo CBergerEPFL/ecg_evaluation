@@ -5,6 +5,19 @@ import pywt
 
 def sdr_score(signals, fs, **kwargs):
     ##SDR coeff:
+    """
+    Calculate the SDR score for signal quality assessment
+
+    Args:
+        signals (Numpy array): Numpy array containing all the signal (expected shape : [num_feature (ex : #lead),signal_length])
+        fs (int): Sampling frequency of the signla (if multiple signals, all signal must have the same sampling frequency)
+
+    Raises:
+        ValueError: Raised when the score is not between 0.5 and 0.8
+
+    Returns:
+        SDR_arr (Numpy array): 1D numpy array containing the index for each lead (shape [num_feature])
+    """
     SDR_arr = np.array([])
     for i in range(signals.shape[0]):
         f, PSD = periodogram(signals[i, :], fs)
@@ -26,6 +39,17 @@ def sdr_score(signals, fs, **kwargs):
 
 
 def wavelet_coef(sig, name, lev):
+    """
+    Calculate the wavelet coefficient of a signal with the given wavelet and type and decomposition level
+
+    Args:
+        sig (Numpy Array): 1D array representing the signal
+        name (String): Name of the wavelet type to use (ex : db4,sym4,...)
+        lev (int): Decomposition level
+
+    Returns:
+        Tuple : Tuple contianing the approximation coefficients and the detail coefficients array (in that order)
+    """
     All_coeff = pywt.wavedec(sig, name, level=lev)
 
     CA = All_coeff[0]
@@ -34,10 +58,28 @@ def wavelet_coef(sig, name, lev):
 
 
 def energy_l2(coeff):
+    """
+    Calculate the L2 energy of the signal
+
+    Args:
+        coeff (Numpy Array): 1D Numpy array containing the coefficients
+
+    Returns:
+        float64 : L2 norm value
+    """
     return np.sum(np.abs(coeff) ** 2, dtype=np.float64)
 
 
 def wpmf_score(signals, **kwargs):
+    """
+    Calculate the wPMF score for signal quality assessment
+
+    Args:
+        signals (Numpy array): Numpy array containing all the signal (expected shape : [num_feature (ex : #lead),signal_length])
+
+    Returns:
+        1D numpy array : 1D numpy array containing the index for each lead (shape [num_feature])
+    """
     waveletname = "db4"
     level_w = 9
     wPMF_arr = np.array([], dtype=np.float64)
@@ -61,6 +103,20 @@ def wpmf_score(signals, **kwargs):
 
 
 def snr_index(signals, fs, **kwargs):
+    """
+    Calculate the SNRECG score for signal quality assessment
+
+    Args:
+        signals (Numpy array): Numpy array containing all the signal (expected shape : [num_feature (ex : #lead),signal_length])
+        fs (int): Sampling frequency of the signla (if multiple signals, all signal must have the same sampling frequency)
+
+    Raises:
+        ValueError: Raised if the Normalization didn't work as expected
+        ValueError: Raise if for Normalization, a negative value is obtained
+
+    Returns:
+        1D numpy array : 1D numpy array containing the index for each lead (shape [num_feature])
+    """
     SNR_arr = np.array([], dtype=np.float64)
     for i in range(signals.shape[0]):
         f, PSD = periodogram(signals[i, :], fs, scaling="spectrum")

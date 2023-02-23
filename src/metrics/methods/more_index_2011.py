@@ -2,9 +2,24 @@ import numpy as np
 from scipy.linalg import eigvals
 from numba import njit
 
+## Adaptated code from the code found : https://physionet.org/content/challenge-2011/1.0.0/
+
 
 @njit
 def missing_signal_counts(all_lead, j, upperbnd, lowerbnd, N_signal):
+    """
+    Clacualte missing singal counts score index used for the MoRE matrix
+
+    Args:
+        all_lead (2D Numpy array): Numpy array containing all the signal (expected shape : [num_feature (ex : #lead),signal_length])
+        j (int): Current index of the loop (i.e. current lead compared)
+        upperbnd (float): Upper bound value
+        lowerbnd (float): Lower bound value
+        N_signal (int): Signal length
+
+    Returns:
+        float : Missing count values
+    """
     missingsignalcounts = 0
     for i in range(N_signal):
         if all_lead[j, i] > upperbnd or all_lead[j, i] < lowerbnd:
@@ -15,6 +30,18 @@ def missing_signal_counts(all_lead, j, upperbnd, lowerbnd, N_signal):
 
 @njit
 def Fill_Matrix(Mat, j, test_smth, weigth):
+    """
+    Updated the given matrix for all indexes except a given one
+
+    Args:
+        Mat (2D Numpy array): More Matrix (shape  : n_lead*n_lead)
+        j (int): Lead index to avoid
+        test_smth (float): Score used for updated
+        weigth (flaot): Weigth for the score
+
+    Returns:
+        2D Numpy array : Updated MoRE matrix
+    """
     for k in range(Mat.shape[1]):
         if k != j:
             Mat[j, k] = Mat[j, k] + test_smth * weigth
@@ -26,6 +53,20 @@ def Fill_Matrix(Mat, j, test_smth, weigth):
 
 @njit
 def Flatsegment_detection(all_lead, j, segNum, segLen, upperbnd, lowerbnd):
+    """
+    Calcualte the Flatline score as implemented by the MoRE index
+
+    Args:
+        all_lead (2D Numpy array): Numpy array containing all the signal (expected shape : [num_feature (ex : #lead),signal_length])
+        j (int): Current index of the loop (i.e. current lead compared)
+        segNum (int): Number of segment
+        segLen (int): Segment length
+        upperbnd (float): Upper bound value
+        lowerbnd (float): Lower bound value
+
+    Returns:
+        Float64 : Flatline segment score value
+    """
     flatTest = 0.0
     z = np.zeros(segLen)
     for s in range(segNum):
@@ -48,6 +89,19 @@ def Flatsegment_detection(all_lead, j, segNum, segLen, upperbnd, lowerbnd):
 
 @njit
 def Large_derivative(all_lead, j, N_signal, LDdv_th):
+    """
+
+    Calculate index score for large deerivative as used in the MoRE index
+
+    Args:
+        all_lead (2D Numpy array): Numpy array containing all the signal (expected shape : [num_feature (ex : #lead),signal_length])
+        j (int): Current index of the loop (i.e. current lead compared)
+        N_signal (int): Number of lead in the ECG
+        LDdv_th (Float): threshold derivative
+
+    Returns:
+        Float64 : Large derivative score value
+    """
     dy = np.zeros(N_signal - 1)
     for k in range(N_signal - 1):
         dy[k] = all_lead[j, k + 1] - all_lead[j, k]
@@ -73,6 +127,24 @@ def Matrix_Regularity(
     flatweigth,
     ldWeigth,
 ):
+    """_summary_
+
+    Args:
+        all_lead (2D Numpy array): Numpy array containing all the signal (expected shape : [num_feature (ex : #lead),signal_length])
+        N_channels (int): Number of lead
+        N_signal (int): Signal length
+        segLen (int): Segment length
+        segNum (int): Number of segment
+        upperbnd (Float): Upper bound value
+        lowerbnd (Float): Lower vound value
+        LDdv_th (Float): Threshold large derivative value
+        missWeigth (Float): Missing signal count wiegth
+        flatweigth (Float): Flatline segment count length
+        ldWeigth (Float): Large derivative weigth
+
+    Returns:
+        2D Numpy array : MoRE Matrix
+    """
     Mat = np.zeros([N_channels, N_channels])
     ##In all channels:
     for j in range(N_channels):
@@ -103,6 +175,17 @@ def Matrix_Regularity(
 
 
 def MoRE_score(signals, fs):
+    """
+
+    Calculate the MoRE signal quality index
+
+    Args:
+        signals (2D Numpy array): Numpy array containing all the signal (expected shape : [num_feature (ex : #lead),signal_length])
+        fs (int): Sampling Frequency
+
+    Returns:
+        Float : MoRE score value
+    """
     N_channels = signals.shape[0]
     N_signal = signals.shape[1]
     all_lead = np.empty([N_channels, N_signal])

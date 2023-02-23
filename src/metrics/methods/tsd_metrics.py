@@ -7,6 +7,18 @@ from numba import njit
 
 
 def system_coordinates_reader(Path_to_data, Attractor_name, num_attractor=0):
+    """
+
+    Read csv file and extract x,y,z time evolution of a dynamical system
+
+    Args:
+        Path_to_data (String): Path toward your dataset
+        Attractor_name (String): Attractor name
+        num_attractor (int, optional): Attractor type. Defaults to 0.
+
+    Returns:
+        Tuple : Tuple containing the x,y,z time evolution and the timestep
+    """
     path = Path_to_data + f"/{Attractor_name}_attractors"
     df = pd.read_csv(path + f"/{Attractor_name}__{num_attractor}.csv")
     df_n = df.to_numpy()
@@ -17,11 +29,37 @@ def system_coordinates_reader(Path_to_data, Attractor_name, num_attractor=0):
 
 @njit
 def taux_Mean_fast(signal, taux, hprime, h=0):
+    """
+
+    Calculate the Mean of the observed signal follwoing the definition given by Takumi Sase et al in
+    "Estimating the level of dynamical noise in time series by using fractal dimensions"
+
+    Args:
+        signal (1D Numpy array): Signal
+        taux (int): Time step
+        hprime (int): Interval bound
+        h (int, optional): Segment timestep. Defaults to 0.
+
+    Returns:
+        Float : E(Xobs(t))
+    """
     return np.mean((signal[int(h + taux) : int(taux + hprime + h)]))
 
 
 @njit
 def taux_var_fast(signal, taux, hprime, h=0):
+    """
+    Calculate the variance of the observed signal following the definition given by Takumi Sase et al in
+    "Estimating the level of dynamical noise in time series by using fractal dimensions"
+    Args:
+        signal (1D Numpy array): Signal
+        taux (int): Time step
+        hprime (int): Interval bound
+        h (int, optional): Segment timestep. Defaults to 0.
+
+    Returns:
+        Float : Var(Xobs(t))
+    """
     return np.var(signal[int(h + taux) : int(taux + hprime + h)])
 
 
