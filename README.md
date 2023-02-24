@@ -11,22 +11,33 @@ The project was done in python using **Docker**[[1]](#1) with the docker image [
 ### Index :
 
 The indexes implemented are the following :
+</b>
     1. **wPMF**[[2]](#2)
+</b>
     2. **SNR**[[3]](#3) : This is an adaptation . We add a normalized version of this
+</b>
     3. **TSD**[[4]](#4) : Both normalized and non normalized are implemented.
+</b>
     3. **Kurtosis**[[5]](#5)
+</b>
     4. Flatline
+</b>
     5. **Interlead Correlation coefficient**[[6]](#6)
+</b>
     6. **Intralead Correlation coefficient**[[6]](#6)
+</b>
     7. Heart Rate
-
+</b>
 More information about these indexes can be found in the article.
 
 ### Models :
 
 The following models are implemented :
+</b>
     1. Logistic regression (using **Sklearn**[[7]](#7))
+</b>
     2. Custom Logistic regression
+</b>
     3. LightGBMTree (using **Light GBM library**[[8]](#8)
 
 ## Run the code :
