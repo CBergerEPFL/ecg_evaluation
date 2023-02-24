@@ -16,7 +16,7 @@ The indexes implemented are the following :
 - **TSD** [[4]](#4) : Both normalized and non normalized are implemented.
 - **Kurtosis** [[5]](#5)
 - **Flatline**
-- **Interlead Correlation coefficient** [[6]](#6)
+- **Interlead Correlation coefficient**
 - **Intralead Correlation coefficient** [[6]](#6)
 - **Heart Rate**
 
