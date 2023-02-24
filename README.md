@@ -78,13 +78,6 @@ To run models evaluation and performance metrics, please run the following termi
     python /workspaces/ecg_evaluation/src/operations/__exec_train_models.py
 ```
 
-## Visualization :
-
-To visualize all of your results, please run the following notebook : aggregate_results.ipynb
-
-All performance results ,for both indexes and models, will be printed as a table.
-ROC and PR curve can also be printed with this notebook
-
 In "__exec_train_models.py", you can modiy the list of features you want to test and build your model on. You can also modified the type of model you want to try. You can also, by giving a list of features, applied a feature selection by changing the feature selection argument in the function by one of the 3 following :
 - backward_selection
 - JMI_score
@@ -94,6 +87,15 @@ In "__exec_train_models.py", you can modiy the list of features you want to test
 The trained model prediction on the dataset will be stored in separate pickle files (in another folder called "proba_methods"). The name of your model will be indicated on the file.
 
 The trained model perfomance on the dataset will be stored into separate CSV files (stored in a folder called "evaluation_metrics"). The name of your model will be indicated on the file.
+
+
+## Visualization :
+
+To visualize all of your results, please run the following notebook : **aggregate_results.ipynb**
+
+All performance results ,for both indexes and models, will be printed as a table.
+ROC and PR curve can also be printed with this notebook
+
 
 ## References
 
