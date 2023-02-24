@@ -11,26 +11,57 @@ The project was done in python using **Docker**[[1]](#1) with the docker image [
 ### Index :
 
 The indexes implemented are the following :
-- **wPMF**[[2]](#2)
-- **SNR**[[3]](#3) : This is an adaptation . We add a normalized version of this
-- **TSD**[[4]](#4) : Both normalized and non normalized are implemented.
-- **Kurtosis**[[5]](#5)
-- Flatline
-- **Interlead Correlation coefficient**[[6]](#6)
-- **Intralead Correlation coefficient**[[6]](#6)
-- Heart Rate
+- **wPMF** [[2]](#2)
+- **SNR** [[3]](#3) : This is an adaptation . We add a normalized version of this
+- **TSD** [[4]](#4) : Both normalized and non normalized are implemented.
+- **Kurtosis** [[5]](#5)
+- **Flatline**
+- **Interlead Correlation coefficient** [[6]](#6)
+- **Intralead Correlation coefficient** [[6]](#6)
+- **Heart Rate**
 
 More information about these indexes can be found in the article.
 
 ### Models :
 
 The following models are implemented :
-- Logistic regression (using **Sklearn**[[7]](#7))
+- Logistic regression (using **Sklearn** [[7]](#7))
 - Custom Logistic regression
-- LightGBMTree (using **Light GBM library**[[8]](#8)
+- LightGBM Tree (using **Light GBM library** [[8]](#8)
 
 ## Run the code :
 
+### Get metrics data :
+
+To get your metrics data (i.e. matrix of ECG_recordings*n_features), please run the following code line in your terminal :
+
+```python
+
+    python /workspaces/ecg_evaluation/src/operations/__exec_compute_metrics.py
+```
+
+in "__exec_compute_metrics.py", you must specify the path towards your data. Your data must be in Parquet format using [Petastorm](https://petastorm.readthedocs.io/en/latest/index.html).
+
+The default path is to a gitignored data folder. You can insert your dataset in this folder and change the path to where the datafiles are.
+
+The results will be stored in the "results" folder (in a netcdf (.nc) file format)
+
+### Get Index evaluation done :
+
+To Evaluate your index (with Stratified 10-fold Cross validation), please run the following code line in your terminal :
+
+
+```python
+
+    python /workspaces/ecg_evaluation/src/operations/__exec_evaluate_index.py
+```
+
+**The .nc file format must be already present! If not, run the previous part**
+
+This will automatically evaluate each of the indexes and store the performance results into separate CSV files (stored in a folder called "evaluation_metrics") and the associated index score in separate pickle files (in another folder called "proba_methods"). Files will be located into a folder "results" which **must** be gitignore.
+
+
+## Models evaluation :
 
 
 ## References
