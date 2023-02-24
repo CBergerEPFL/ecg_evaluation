@@ -83,7 +83,7 @@ def HurstD_index(signals, fs):
         fs (int): Sampling frequency of the signla (if multiple signals, all signal must have the same sampling frequency)
 
     Returns:
-        _type_: _description_
+       1D numpy array : 1D numpy array containing the index for each lead (shape [num_feature])
     """
     H_array = np.array([])
     for i in range(signals.shape[0]):
