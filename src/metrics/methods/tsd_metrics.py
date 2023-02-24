@@ -65,6 +65,19 @@ def taux_var_fast(signal, taux, hprime, h=0):
 
 @njit(parallel=True)
 def adapted_c(c_val, fs, h, hprime, signal):
+    """
+    Return the adequate c interval for the calculation of I1 adn I2
+
+    Args:
+        c_val (1D Numpy array): Timestep valus
+        fs (int): Sampling frequency
+        h (Float): Segment timestep
+        hprime (Float): Interval bound
+        signal (1D Numpy array): Signal studied
+
+    Returns:
+        1D numpy array : Adapted timestep interval
+    """
     for l in c_val:
         if (
             l * fs + hprime * len(signal) + h * len(signal) > len(signal)
@@ -77,6 +90,23 @@ def adapted_c(c_val, fs, h, hprime, signal):
 
 @njit
 def I1(c, signal, fs, h, hprime, step_c, t0=0):
+    """
+
+    I1 value as define by Takumi Sase et al in
+    "Estimating the level of dynamical noise in time series by using fractal dimensions"
+
+    Args:
+        c (1D Numpy array ): Timestep interval
+        signal (1D Numpy array): Signal considered (lead)
+        fs (int): Sampling frequency
+        h (Float): Segment timestep
+        hprime (Float): Interval bound
+        step_c (Float): step used to get c
+        t0 (int, optional): Intial timestep. Defaults to 0.
+
+    Returns:
+        1D Numpy array : I1 values
+    """
     tab = np.zeros_like(c)
     for count in range(len(tab)):
         if count == 0:
@@ -109,6 +139,22 @@ def I1(c, signal, fs, h, hprime, step_c, t0=0):
 
 @njit
 def I2(c, signal, fs, h, hprime, step_c, t0=0):
+    """
+    I2 value as define by Takumi Sase et al in
+    "Estimating the level of dynamical noise in time series by using fractal dimensions"
+
+    Args:
+        c (1D Numpy array ): Timestep interval
+        signal (1D Numpy array): Signal considered (lead)
+        fs (int): Sampling frequency
+        h (Float): Segment timestep
+        hprime (Float): Interval bound
+        step_c (Float): step used to get c
+        t0 (int, optional): Intial timestep. Defaults to 0.
+
+    Returns:
+        1D Numpy array : I2 values
+    """
     tab = np.zeros_like(c)
     for count in range(len(tab)):
         if count == 0:
@@ -141,6 +187,19 @@ def I2(c, signal, fs, h, hprime, step_c, t0=0):
 
 @njit
 def discrepancies_mean_curve(signal_tot, fs, h, hprime, t0=0):
+    """
+    Calculate I1 and I2 coefficients as defined by Takumi Sase et al in
+    "Estimating the level of dynamical noise in time series by using fractal dimensions"
+    Args:
+        signal_tot (1D Numpy array): Signal studied
+        fs (int): Sampling frequency
+        h (Float): Segment timestep
+        hprime (Float): Interval bound
+        t0 (int, optional): Initial timestep point. Defaults to 0.
+
+    Returns:
+        Tuple : Tuple containing I1,I2 and the interval array on which they have been calculated (in that order)
+    """
     c1 = np.linspace(t0, int((len(signal_tot) / fs) + t0), len(signal_tot))
     c_adapted = adapted_c(c1, fs, h, hprime, signal_tot)
     I1_t = I1(c_adapted, signal_tot, fs, h, hprime, 1 / fs, t0)
@@ -150,6 +209,19 @@ def discrepancies_mean_curve(signal_tot, fs, h, hprime, t0=0):
 
 @njit
 def Interval_calculator_lead(signal, fs, t0=0):
+    """
+
+    Calculate the optimal interval for applying the TSD on the signal, wiht the method defined by Takumi Sase et al in
+    "Estimating the level of dynamical noise in time series by using fractal dimensions"
+
+    Args:
+        signal (2D Numpy array): Signal studied
+        fs (int): Sampling frequency
+        t0 (int, optional): Initial timestep point. Defaults to 0.
+
+    Returns:
+        _type_: _description_
+    """
     h = 0.001
     hprime = 0.005
     I1c, I2c, c = discrepancies_mean_curve(signal, fs, h, hprime)
@@ -168,8 +240,7 @@ def Interval_calculator_lead(signal, fs, t0=0):
     else:
         cs = np.minimum(c1[-1], c2[-1])
     dic_segment_lead = (cs - t0) * fs
-    # if dic_segment_lead <100 :
-    # dic_segment_lead = 100
+
     return dic_segment_lead
 
 
@@ -181,6 +252,15 @@ def Interval_calculator_lead(signal, fs, t0=0):
 
 
 def is_segment_flatline(sig):
+    """
+    Check if the signal has more than 50% of its values that are horizontale
+
+    Args:
+        sig (1D Numpy array): signal considered
+
+    Returns:
+        Bool : Boolean value indicating if the signal is mostly a flatline (True if this is the case)
+    """
     cond = np.where(np.diff(sig.copy(), 1) != 0.0, False, True)
     if len(cond[cond == True]) < 0.50 * len(sig):
         return False
@@ -188,35 +268,37 @@ def is_segment_flatline(sig):
 
 
 def tsd_index_solo(dico_signal, name_lead, fs):
+    """
+    Calculate the TSD index for one lead
 
-    ###Index Creation :TSD
-    ###The label will be as follow : mean(TSD) < 1.25 = Acceptable;mean(SDR of all lead) >1.25 = Unacceptable
-    ##For each lead, we will return a more precise classification based on the folloying rules:
-    ## TSD<1.25 = Good quality ; 1.25<TSD<1.40 = Medium quality; TSD>1.4 = Bad quality
-    # dico_seg = Interval_calculator(dico_signal,name_lead,fs,t0)
-    dico_D = {}
-    D_arr = np.array([])
-    # dic_segment = Interval_calculator_all(dico_signal,name_lead,fs)
-    # dic_segment = 2500
-    for i in name_lead:
-        Dv, _ = tsd_mean_calculator(dico_signal[i], 100, fs)
-        if Dv < 1:
-            Dv = 1
-        dico_D[i] = (Dv, dico_signal[i])
-        D_arr = np.append(D_arr, Dv)
-    return dico_D, np.mean(D_arr)
+    Args:
+        dico_signal (1D Numpy array): Lead studied
+        name_lead (String): Name of the lead
+        fs (int): Sampling frequency
+
+    Returns:
+        dictionary : Dictionary containing the mean TSD value of the lead
+    """
+    Dv, _ = tsd_mean_calculator(dico_signal, 100, fs)
+    if Dv < 1:
+        Dv = 1
+    return {name_lead: Dv}
 
 
 def tsd_index(signals, fs, **norm):
+    """
 
-    ###Index Creation :TSD
-    ###The label will be as follow : mean(TSD) < 1.25 = Acceptable;mean(SDR of all lead) >1.25 = Unacceptable
-    ##For each lead, we will return a more precise classification based on the folloying rules:
-    ## TSD<1.25 = Good quality ; 1.25<TSD<1.40 = Medium quality; TSD>1.4 = Bad quality
-    # dico_seg = Interval_calculator(dico_signal,name_lead,fs,t0)
+    Calculate the TSD score for signal quality assessment
+
+    Args:
+        signals (2D Numpy array): Numpy array containing all the signal (expected shape : [num_feature (ex : #lead),signal_length])
+        fs (int): Sampling frequency
+
+    Returns:
+        1D Numpy array : 1D numpy array containing the index for each lead (shape [num_feature])
+    """
     D_arr = np.array([])
-    # dic_segment = Interval_calculator_all(dico_signal,name_lead,fs)
-    # dic_segment = 2500
+
     for i in range(signals.shape[0]):
         Dv, _ = tsd_mean_calculator(signals[i, :], 100, fs)
 
@@ -233,7 +315,17 @@ def tsd_index(signals, fs, **norm):
 
 
 def tsd_index_dico(dico_signal, name_lead, fs):
+    """
+    Calculate the TSD score for signal quality assessment using dictionaries
 
+    Args:
+        dico_signal (Dictionary): Dictionary containing each lead (key : Lead name ; Value : 1D Numpy array)
+        name_lead (1D numpy array String or String list): List of the leads name
+        fs (int): Sampling frequency
+
+    Returns:
+        Tuple : Tuple with a dictionary of the TSD value of each lead and the mean TSD value of the signals set
+    """
     ###Index Creation :TSD
     ###The label will be as follow : mean(TSD) < 1.25 = Acceptable;mean(SDR of all lead) >1.25 = Unacceptable
     ##For each lead, we will return a more precise classification based on the folloying rules:
@@ -253,7 +345,17 @@ def tsd_index_dico(dico_signal, name_lead, fs):
 
 
 def tsd_index_lead(signal, segment, fs):
+    """
+    Calculate the TSD score for signal quality assessment for one lead only
 
+    Args:
+        signal (1D Numpy array): Signal
+        segment (int): Segment length desired
+        fs (int): Sampling frequency
+
+    Returns:
+        Float64 : Return the Mean TSD value of the signal
+    """
     ###Index Creation :TSD for 1 lead
     ###The label will be as follow : mean(TSD) < 1.25 = Acceptable;mean(SDR of all lead) >1.25 = Unacceptable
     ##For each lead, we will return a more precise classification based on the folloying rules:
@@ -265,6 +367,18 @@ def tsd_index_lead(signal, segment, fs):
 
 @njit
 def lm_q(signal1, m, k, fs):
+    """
+    Calculate the Lm_q term in the Higuchi method. Adapted from : https://github.com/hiroki-kojima/HFDA
+
+    Args:
+        signal1 (1D Numpy array): Signal under study
+        m (int): Total number of segment indexes
+        k (int): Total number of segment
+        fs (int): Sampling frequency
+
+    Returns:
+        Float64 : Lm_q
+    """
     N = len(signal1)
     n = np.floor((N - m) / k)
     norm = (N - 1) / (n * k * (1 / fs))
@@ -278,6 +392,18 @@ def lm_q(signal1, m, k, fs):
 
 @njit
 def lq_k(signal, k, fs):
+    """
+    Calculate the Lq_k term in the Higuchi method. Adapted from : https://github.com/hiroki-kojima/HFDA
+
+
+    Args:
+        signal (1D Numpy array): Signal under study
+        k (int): Total number of segment
+        fs (int): Sampling frequency
+
+    Returns:
+       Float64 : Averge length (l(k))
+    """
     # calc_L_series = np.frompyfunc(lambda m: Lm_q(signal, m, k, fs), 1, 1)
     calc_L_series = np.zeros(k)
     for m in range(1, k + 1):
@@ -287,6 +413,17 @@ def lq_k(signal, k, fs):
 
 
 def Dq(signal, kmax, fs):
+    """
+    Calculate Dimension of time series. Adapted from : https://github.com/hiroki-kojima/HFDA
+
+    Args:
+        signal (1D Numpy array): Signal
+        kmax (int): Total number of segment
+        fs (int): Sampling Frequency
+
+    Returns:
+        Float64 : Time series dimension
+    """
     calc_L_average_series = np.frompyfunc(lambda k: lq_k(signal, k, fs), 1, 1)
 
     k = np.arange(1, kmax + 1)
@@ -298,7 +435,13 @@ def Dq(signal, kmax, fs):
 
 
 def tsd_plot(dico_lead, name_lead, fs):
-
+    """
+    Plot TSD time evolution for a set of signal given
+    Args:
+        dico_lead (Dictionary): Dictionary containing each lead (key : Lead name ; Value : 1D Numpy array)
+        name_lead (1D String Numpy array or list of string): Name of each lead
+        fs (int): Sampling frequency
+    """
     D_lead = {}
     for i in name_lead:
         sig = dico_lead[i]
@@ -337,6 +480,17 @@ def tsd_plot(dico_lead, name_lead, fs):
 
 @njit
 def tsd_mean_calculator(signal2, segment_length, fs):
+    """
+        Calculate the TSD time evolution of the signal
+
+    Args:
+        signal2 (1D Numpy array ): Signal
+        segment_length (int): Segment size used to calculate the TSD
+        fs (int): Sampling Frequency
+
+    Returns:
+        Tuple : Tuple containing the mean TSD value of the signal and its SD
+    """
     Ds = np.zeros(int(len(signal2) - segment_length) - 1)
     for w in range(1, int(len(signal2) - segment_length)):
         sig_true = signal2[int((w - 1)) : int((w) + segment_length)]
@@ -353,6 +507,17 @@ def tsd_mean_calculator(signal2, segment_length, fs):
 
 @njit
 def tsd_calculator(signal2, segment_length, fs):
+    """
+    Calculate the TSD time evolution of the signal and return the TSD time evolution
+
+    Args:
+        signal2 (1D Numpy array ): Signal
+        segment_length (int): Segment size used to calculate the TSD
+        fs (int): Sampling Frequency
+
+    Returns:
+        Tuple : Tuple containing the TSD time evolution array and its mean value
+    """
     Ds = np.zeros(int(len(signal2) - segment_length) - 1)
     for w in range(1, int(len(signal2) - segment_length)):
         sig_true = signal2[int((w - 1)) : int((w) + segment_length)]
@@ -368,6 +533,16 @@ def tsd_calculator(signal2, segment_length, fs):
 
 
 def add_observational_noise(sig, SNR):
+    """
+    Add to the signal an specific white noise according to a desired SNR value
+
+    Args:
+        sig (1D Numpy array): Signal
+        SNR (Float): SNR of the output signal
+
+    Returns:
+        1D Numpy array : Signal with noise added
+    """
     Power_sig = (1 / len(sig)) * np.sum(np.abs(sig) ** 2, dtype=np.float64)
     P_db = 10 * np.log10(Power_sig)
     noisedb = P_db - SNR
@@ -379,6 +554,17 @@ def add_observational_noise(sig, SNR):
 
 
 def tsd_vs_noiseLevel_array(noise_level, path_to_data, list_attractor):
+    """
+    Calculate TSD of systems (from csv file) with different noise levels
+
+    Args:
+        noise_level (1D Numpy Float array): Range of the noise level studied
+        path_to_data (String):  Path to your systems
+        list_attractor (List of String): Name of your system
+
+    Returns:
+        Tuple : Tuple containing dictionnary of TSD mean value for different noise level and their STD
+    """
     Dmean = {}
     SD_D = {}
 
@@ -418,6 +604,15 @@ def tsd_vs_noiseLevel_array(noise_level, path_to_data, list_attractor):
 
 
 def plt_TSDvsNoise(noise_lev, path_to_data, attractors_sel):
+    """
+
+    Pot a heatmap representing the variation of observational noise in function of dynamical noise using TSD
+
+    Args:
+        noise_level (1D Numpy Float array): Range of the noise level studied
+        path_to_data (String):  Path to your systems
+        list_attractor (List of String): Name of your system
+    """
     Great_mean, Great_SD = tsd_vs_noiseLevel_array(
         noise_lev, path_to_data, attractors_sel
     )

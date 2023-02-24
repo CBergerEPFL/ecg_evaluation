@@ -8,7 +8,7 @@ from numba import njit
 @njit
 def missing_signal_counts(all_lead, j, upperbnd, lowerbnd, N_signal):
     """
-    Clacualte missing singal counts score index used for the MoRE matrix
+    Calculate missing signal counts score index used for the MoRE matrix
 
     Args:
         all_lead (2D Numpy array): Numpy array containing all the signal (expected shape : [num_feature (ex : #lead),signal_length])

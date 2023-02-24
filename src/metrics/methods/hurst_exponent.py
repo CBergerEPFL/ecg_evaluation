@@ -4,6 +4,15 @@ from numba import njit
 
 @njit
 def genhurst(S, q):
+    """_summary_
+
+    Args:
+        S (1D Numpy array): Signal
+        q (int): Decree of the generalized form of the Hurst Exponent
+
+    Returns:
+        Float : Hurst exponent
+    """
     ##adapted from : https://github.com/PTRRupprecht/GenHurst/blob/master/genhurst.py
     L = len(S)
     # if L < 100:
@@ -49,6 +58,15 @@ def genhurst(S, q):
 
 
 def is_segment_flatline(sig):
+    """
+    Check if the signal has more than 50% of its values that are horizontale
+
+    Args:
+        sig (1D Numpy array): signal considered
+
+    Returns:
+        Bool : Boolean value indicating if the signal is mostly a flatline (True if this is the case)
+    """
     cond = np.where(np.diff(sig.copy(), 1) != 0.0, False, True)
     if len(cond[cond == True]) < 0.50 * len(sig):
         return False
@@ -56,6 +74,17 @@ def is_segment_flatline(sig):
 
 
 def HurstD_index(signals, fs):
+
+    """
+    Calculate the Hurst exponent for signal quality assessment
+
+    Args:
+        signals (Numpy array): Numpy array containing all the signal (expected shape : [num_feature (ex : #lead),signal_length])
+        fs (int): Sampling frequency of the signla (if multiple signals, all signal must have the same sampling frequency)
+
+    Returns:
+        _type_: _description_
+    """
     H_array = np.array([])
     for i in range(signals.shape[0]):
         if is_segment_flatline(signals[i, :]):
