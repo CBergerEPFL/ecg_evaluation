@@ -1,9 +1,13 @@
-###Note : This code is an adaption of the ECG ASSESS code found on the following link :https://github.com/LinusKra/ECGAssess
 import scipy.signal
 import numpy as np
 from ecgdetectors import Detectors
 import neurokit2 as nk
 
+
+"""
+
+This code is an adaption of the ECG ASSESS code found on the following link :https://github.com/LinusKra/ECGAssess
+"""
 detectors = Detectors(500)
 
 # region set parameters

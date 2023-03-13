@@ -8,6 +8,14 @@ from sklearn.metrics import auc, precision_recall_curve, roc_curve
 
 
 def plot_roc_pr_curve(y_label: list, y_pred: list):
+    """
+
+    Plot individual ROC and PR curve obtained for each fold, for a specific model evaluated
+
+    Args:
+        y_label (list): Prediction label associated to each fold (shape : [n_fold,n_fold_sample])
+        y_pred (list): Predicted label by the model to each fold (shape : [n_fold,n_fold_sample])
+    """
     plt.rcParams.update({"font.size": 22})
     k_cv = len(y_label)
     fig, ax = plt.subplots(nrows=2, ncols=1, figsize=(10, 15))
@@ -118,6 +126,14 @@ def plot_roc_pr_curve(y_label: list, y_pred: list):
 
 
 def comparison_roc_pr_mean_curve(path_results, methods):
+    """
+
+    Comparative ROC and PR curve for different methods tested
+
+    Args:
+        path_results (String): Path toward folder containing probability predicted by each method
+        methods (String List):  List containning the methods to be compared
+    """
     plt.rcParams.update({"font.size": 32})
     plt.rcParams["legend.fontsize"] = 32
     dict_results = {}

@@ -124,6 +124,20 @@ def pick_model(model_type, **kwargs):
 
 
 def perform_cv_evaluation(X, y, model_type, nb_fold, save_name, **kwargs):
+    """
+
+    Perform model evaluation through Stratified Cross Validation
+
+    Args:
+        X (2D Numpy array): Feature matrix (shape : [n_samples,n_features])
+        y (1D Numpy array): 1D vector containing the labels or response value (shape : [n_sample,])
+        model_type (string): Model type used for the study
+        nb_fold (int): Number of folds for the CV
+        save_name (string): Path to folder to save results
+
+    Returns:
+        Boolean : Return True if the process finish
+    """
     cv = StratifiedKFold(n_splits=nb_fold, random_state=seed, shuffle=True)
     data_results = Results_Data(model_type)
     if kwargs.get("hp"):

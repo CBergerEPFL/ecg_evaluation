@@ -78,7 +78,7 @@ To run models evaluation and performance metrics, please run the following termi
     python /workspaces/ecg_evaluation/src/operations/__exec_train_models.py
 ```
 
-In "__exec_train_models.py", you can modiy the list of features you want to test and build your model on. You can also modified the type of model you want to try. You can also, by giving a list of features, applied a feature selection by changing the feature selection argument in the function by one of the 3 following :
+In "__exec_train_models.py", you can modiy the list of features you want to test and build your model on. You can also modified the type of model you want to try. You can also, by giving a list of features, applied a feature selection by changing the feature selection argument in the function by one of the 4 following :
 - backward_selection
 - JMI_score
 - L2_regularization
@@ -128,7 +128,7 @@ C. Orphanidou, Signal Quality Assessment in Physiological Monitoring. Cham: Spri
 International Publishing, 2018. doi: 10.1007/978-3-319-68415-4.
 
 <a id="7">[7]</a>
-Pedregosa, F., Varoquaux, Ga"el, Gramfort, A., Michel, V., Thirion, B., Grisel, O., … others. (2011). Scikit-learn: Machine learning in Python. Journal of Machine Learning Research, 12(Oct), 2825–2830.
+Pedregosa, F., Varoquaux, Gael, Gramfort, A., Michel, V., Thirion, B., Grisel, O., … others. (2011). Scikit-learn: Machine learning in Python. Journal of Machine Learning Research, 12(Oct), 2825–2830.
 
 <a id="8">[8]</a>
 Ke, G., Meng, Q., Finley, T., Wang, T., Chen, W., Ma, W., … Liu, T.-Y. (2017). Lightgbm: A highly efficient gradient boosting decision tree. Advances in Neural Information Processing Systems, 30, 3146–3154.
