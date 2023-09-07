@@ -57,11 +57,17 @@ def JMI_score(X, y):
     Returns:
         String List : List of the feature selected by the algorithm
     """
-    initial_feature_set = list(X.columns.values)
     X_dis = discretize_data(X)
-    F, _, _ = lcsi(X_dis, y.values.ravel(), function_name="JMI", n_selected_features=3)
+    feature_set = list(X_dis.columns.values)
+    X_dis = X_dis.values
+    F, _, _ = lcsi(
+        X_dis,
+        y.values.ravel(),
+        function_name="JMI",
+        n_selected_features=len(feature_set),
+    )
     F = list_noduplicate(F)
-    S = [initial_feature_set[i] for i in F]
+    S = [feature_set[i] for i in F]
     return S
 
 
@@ -113,7 +119,7 @@ def results_summary_to_dataframe(results):
     return results_df
 
 
-def hjmi_selection(X, y, max_iteration=20, print_plot=False):
+def hjmi_selection(X, y, max_iteration=20, print_plot=True):
     """
 
     Feature selection using the Historical JMI method
@@ -126,49 +132,55 @@ def hjmi_selection(X, y, max_iteration=20, print_plot=False):
 
     Returns:
         String List : List of the feature selected by the algorithm
+        Float List : List containing the HJMI value when considering each feature
+        FLoat List : List containing the delta value of each feature added.
     """
+    X = discretize_data(X)
+    columns_name = X.columns
+    X = X.values
+    y = y.values
     select_features = []
     collect_hjmi = []
     diff_m = []
-    X_dis = discretize_data(X)
-    initial_feature_set = list(X.columns.values)
     j_h = 0
-    jmi = np.zeros([len(initial_feature_set)])
-    for i in range(max_iteration):
-        for p in range(len(initial_feature_set)):
-            if initial_feature_set[p] in select_features:
+    for n in range(max_iteration):
+        jmi = np.zeros([X.shape[1]])
+        print("Iteration : ", n)
+        for k in range(X.shape[1]):
+            if k in select_features:
                 continue
-            JMI_1 = midd(X_dis[:, p], y.values.ravel())
+            JMI_1 = midd(X[:, k], y.ravel())
             JMI_2 = 0
-            for j in range(len(select_features)):
-                tmp1 = midd(X_dis[:, p], X_dis[:, j])
-                tmp2 = cmidd(X_dis[:, p], X_dis[:, j], y.values.ravel())
+            for j in select_features:
+                tmp1 = midd(X[:, k], X[:, j])
+                tmp2 = cmidd(X[:, k], X[:, j], y.ravel())
                 JMI_2 = JMI_2 + tmp1 - tmp2
-            jmi[p] = j_h + JMI_1
-            if i > 1:
-                jmi[p] = jmi[p] - (JMI_2) / (i - 1)
-        if i == 0:
+            if len(select_features) == 0:
+                jmi[k] = j_h + JMI_1
+            else:
+                jmi[k] = j_h + JMI_1 - JMI_2 / len(select_features)
+
+        if n == 0:
             j_h = np.max(jmi)
             hjmi = j_h
             ind = np.argmax(jmi)
-            select_features.append(initial_feature_set[ind])
+            select_features.append(ind)
             collect_hjmi.append(j_h)
 
         else:  # ((j_h-hjmi)/hjmi)>1e-10)
             j_h = np.max(jmi)
             ind = np.argmax(jmi)
-            if (j_h - hjmi) / (hjmi) > 0.13 and len(select_features) < len(
-                initial_feature_set
-            ):
+            print("diff : ", (j_h - hjmi) / (hjmi))
+            if (j_h - hjmi) / (hjmi) > 0.03 and len(select_features) < X.shape[1]:
                 diff_m.append((j_h - hjmi) / (hjmi))
                 hjmi = j_h
-                select_features.append(initial_feature_set[ind])
-                collect_hjmi.append(hjmi)
+                select_features.append(ind)
+                collect_hjmi.append(j_h)
             else:
                 break
-    if print_plot:
-        elbow_plot(diff_m)
-    return select_features, collect_hjmi
+        print("Name features added : ", columns_name[ind])
+
+    return select_features, collect_hjmi, diff_m
 
 
 def elbow_plot(elbow):
@@ -178,6 +190,7 @@ def elbow_plot(elbow):
     Args:
         elbow (1D Numpy array): Array containing the delta values in function of the number of features added
     """
+    print(elbow)
     n_feat = range(2, len(elbow) + 2)
     elbow_1 = KneeLocator(n_feat, elbow, curve="convex", direction="decreasing")
     fig, ax = plt.subplots()
@@ -204,17 +217,14 @@ def discretize_data(X_data):
         X_dis : Feature matrix with the associated discretize value for each feature (shape : [n_sample,n_feature])
     """
     ##Calculating number of bins necessary :
-    X_dis = np.zeros_like(X_data.values)
-    for j in X_data.columns.values:
-        i = list(X_data.columns.values).index(j)
-        if j == "HR" or j == "der_label":
-            X_dis[:, i] = X_data[j]
-        else:
-            X_f = X_data[j].values.copy()
-            Dx = freedman_diaconis(X_f, returnas="bins")
-            new_ref = np.linspace(0, 1, Dx)
-            ind = np.digitize(X_f, bins=np.linspace(0, 1, Dx))
-            X_dis[:, i] = [new_ref[i] for i in ind]
+
+    X_dis = X_data.copy()
+    for col in X_dis.columns:
+        if col == "sex":
+            continue
+        bins = np.histogram_bin_edges(X_dis[col].values, bins="fd")
+        ind = np.digitize(X_dis[col].values, bins=bins)
+        X_dis[col] = [bins[i - 1] for i in ind]
     return X_dis
 
 

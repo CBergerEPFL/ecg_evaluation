@@ -15,8 +15,8 @@ from shared_utils.utils_path import results_path
 
 def main():
     # parse arguments
-    list_features = ["Corr_interlead", "Corr_intralead", "TSD"]
-    # list_features = ["Corr_interlead", "SNRECG" ,"HR", "Corr_intralead", "wPMF"]
+    # list_features = ['Corr_interlead', 'SNRECG', 'TSD', 'Corr_intralead']
+    list_features = ["Corr_interlead", "SNRECG", "HR", "Corr_intralead", "wPMF"]
     # list_features = ["Corr_interlead", "HR", "wPMF", "TSD"]
     # list_features = ["Corr_interlead", "TSD", "Corr_intralead", "SNRECG"]
 
@@ -40,7 +40,7 @@ def main():
         # feature_selection="L2_regularization",
         nb_fold=5,
         # save_name="lgm"
-        save_name="hjmi_selection",
+        save_name="L2_reg_logistic",
     )
 
 
