@@ -1,11 +1,12 @@
 import os
-import pickle as pkl
+import dill as pkl
 import sys
 
 import lightgbm as lgbm
 import numpy as np
 import pandas as pd
 import xarray as xr
+
 from sklearn.ensemble import ExtraTreesClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold
@@ -165,6 +166,7 @@ def perform_cv_evaluation(X, y, model_type, nb_fold, save_name, **kwargs):
         data_results.append_results(pred, label)
 
     if save_name is not None:
+        # print(model.components.custom_loss)
         data_results.dump_to_file(save_name)
         pkl.dump(model, open(os.path.join(results_path, save_name + ".sav"), "wb"))
 
