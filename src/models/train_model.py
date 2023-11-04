@@ -1,5 +1,5 @@
 import os
-import dill as pkl
+import dill as dd
 import sys
 
 import lightgbm as lgbm
@@ -82,7 +82,7 @@ def train_model(
     elif model_type == "lgbm":
         path_file = os.path.join(results_path, "hp_lgbm_best.pkl")
         with open(path_file, "rb") as f:
-            param_hp = pkl.load(f)
+            param_hp = dd.load(f)
 
         metric_name = param_hp.pop("metric_name")
         param_fixed, dict_param = get_model_parameters(metric_name)
@@ -168,7 +168,7 @@ def perform_cv_evaluation(X, y, model_type, nb_fold, save_name, **kwargs):
     if save_name is not None:
         # print(model.components.custom_loss)
         data_results.dump_to_file(save_name)
-        pkl.dump(model, open(os.path.join(results_path, save_name + ".sav"), "wb"))
+        dd.dump(model, open(os.path.join(results_path, save_name + ".sav"), "wb"))
 
     metrics_cv(
         data_results.dict_results,
