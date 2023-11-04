@@ -27,6 +27,9 @@ dependencies = [
     "kneed>=0.8.2",
     "infoselect>=1.0.2",
     "dill>=0.3.7",
+    "pyspark>=3.5.0",
+    "findspark>=2.0.1",
+    "wfdb>=4.1.2",
 ]
 requires-python = ">=3.10"
 license = {text = "MIT"}
