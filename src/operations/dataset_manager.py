@@ -79,8 +79,8 @@ def resampling_data(data_ref, time_window=10, fs=500):
 
     Args:
         data_ref (Tuple): Tuple containing your physionet data
-        time_window (int) : The time window you want to have in your signal
-        fs (int) : Your new sampling frequency
+        time_window (int) : The time window (in sec) you want your signal to have
+        fs (int) : Your sampling frequency
 
     Returns:
         data (Tuple) : Return your physionet data at your desired sampling frequency (format : (numpy array shape [number_signal,number_of_time_window,signal_length],dictionnary containing updated physionet metadata))
@@ -93,9 +93,11 @@ def resampling_data(data_ref, time_window=10, fs=500):
     elif fs == 0 or fs < 0:
         raise ValueError("Your sampling frequency must be strictly positive")
 
-    if not isinstance(time_window, int):
+    if time_window is None:
+        time_window = 0
+    elif not isinstance(time_window, int):
         raise TypeError("Your time_window must be a non null integer")
-    elif time_window == 0 or time_window < 0:
+    elif time_window < 0:
         raise ValueError("Your time_window must be strictly positive")
 
     ## number of signal
@@ -104,7 +106,7 @@ def resampling_data(data_ref, time_window=10, fs=500):
     fs_ori = data[1]["fs"]
     ##new length signal
     N_old = data[1]["sig_len"]
-    N_new = fs * time_window
+
     ## Calculate duration of the total signal
     time_tot = N_old / fs_ori
     ## First, we have to resample the signal into 500 Hz.
@@ -122,19 +124,29 @@ def resampling_data(data_ref, time_window=10, fs=500):
         )
 
     ## Number of chunks :
-    n = int(N_res / N_new)
-    ## Array containing all the new sample (shape : [nb_signal,nb_chunk,N_new])
-    new_data = np.zeros([nb_signal, n, N_new])
-    for s in range(nb_signal):
-        sig_study = resample_data[:, s]
-        for chunks in range(n):
-            new_data[s, chunks, :] = sig_study[N_new * chunks : N_new * (chunks + 1)]
+    if time_window > 0:
+        N_new = fs * time_window
+        n = int(N_res / N_new)
+        ## Array containing all the new sample (shape : [nb_signal,nb_chunk,N_new])
+        new_data = np.zeros([nb_signal, n, N_new])
+        for s in range(nb_signal):
+            sig_study = resample_data[:, s]
+            for chunks in range(n):
+                new_data[s, chunks, :] = sig_study[
+                    N_new * chunks : N_new * (chunks + 1)
+                ]
+    else:
+        N_new = N_res
+        n = 1
+        new_data = np.zeros([nb_signal, n, N_new])
+        new_data[0, :, :] = resample_data[:, 0]
+        new_data[1, :, :] = resample_data[:, 1]
 
     ##Changing the value now :
     data[0] = new_data
     data[1]["sig_len"] = N_new
     data[1]["fs"] = fs
-    data[1]["number_chunks"] = n
+    data[1]["number_subsignal"] = n
     return tuple(data)
 
 
@@ -145,8 +157,8 @@ def get_dataset(name_dataset, ignore_subdfolder=True, fs=None, time_window=None)
     Args:
         name_dataset (String): Name of your physionet dataset
         ignore_subfolder (Boolean : Defaul = True): Boolean if you want to look into any folder inside your physionet dataset
-        fs (int : Default = None) : your sampling frequency
-        time_window (int : Default = None) : your time window
+        fs (int : Default = None) : your sampling frequency (in Hz)
+        time_window (int : Default = None) : your time window (in sec)
 
         For the moment, if you want resampling, you need to give both time_window and fs.
 
@@ -160,7 +172,7 @@ def get_dataset(name_dataset, ignore_subdfolder=True, fs=None, time_window=None)
     for data in files:
         dataset[data.split("/")[-1]] = wfdb.rdsamp(os.path.join(path_to_folder, data))
 
-    if fs is not None and time_window is not None:
+    if fs is not None:
         for data in files:
             dataset[data.split("/")[-1]] = resampling_data(
                 dataset[data.split("/")[-1]], time_window=time_window, fs=fs
