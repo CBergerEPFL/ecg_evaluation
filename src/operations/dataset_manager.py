@@ -4,11 +4,8 @@ import argparse
 import os
 import sys
 import warnings
-
-CWD = os.getcwd()
-FILEPATH = os.path.dirname(os.path.realpath(__file__))
-ROOTPATH = os.path.dirname(FILEPATH)
-sys.path.append(os.path.join(ROOTPATH))
+import xarray as xr
+import pandas as pd
 
 ##Custom import
 from shared_utils.utils_path import data_path
@@ -73,7 +70,7 @@ def get_name_files(name_dataset, ignore_inner_folder):
     return files
 
 
-def resampling_data(data_ref, time_window=10, fs=500):
+def resampling_data(data_ref, fs=500):
     """
     Resample your physionet data at your desired sampling frequency and divided it into different time window
 
@@ -92,13 +89,6 @@ def resampling_data(data_ref, time_window=10, fs=500):
         raise TypeError("Your sampling frequency must be a non null integer")
     elif fs == 0 or fs < 0:
         raise ValueError("Your sampling frequency must be strictly positive")
-
-    if time_window is None:
-        time_window = 0
-    elif not isinstance(time_window, int):
-        raise TypeError("Your time_window must be a non null integer")
-    elif time_window < 0:
-        raise ValueError("Your time_window must be strictly positive")
 
     ## number of signal
     nb_signal = data[1]["n_sig"]
@@ -122,43 +112,71 @@ def resampling_data(data_ref, time_window=10, fs=500):
             np.linspace(0, time_tot, N_old, endpoint=False),
             sig_to_resamp,
         )
-
-    ## Number of chunks :
-    if time_window > 0:
-        N_new = fs * time_window
-        n = int(N_res / N_new)
-        ## Array containing all the new sample (shape : [nb_signal,nb_chunk,N_new])
-        new_data = np.zeros([nb_signal, n, N_new])
-        for s in range(nb_signal):
-            sig_study = resample_data[:, s]
-            for chunks in range(n):
-                new_data[s, chunks, :] = sig_study[
-                    N_new * chunks : N_new * (chunks + 1)
-                ]
-    else:
-        N_new = N_res
-        n = 1
-        new_data = np.zeros([nb_signal, n, N_new])
-        new_data[0, :, :] = resample_data[:, 0]
-        new_data[1, :, :] = resample_data[:, 1]
-
     ##Changing the value now :
-    data[0] = new_data
-    data[1]["sig_len"] = N_new
+    data[0] = resample_data
+    data[1]["sig_len"] = N_res
     data[1]["fs"] = fs
-    data[1]["number_subsignal"] = n
     return tuple(data)
 
 
+def segment_signal(data, fs=500, time_window=10):
+    """
+    Segment your signal into multiple sub signal of define time window.
+
+    Args:
+        data_ref (Numpy array): Numpy array containing your data (shape : [signal_length,nb_signal])
+        time_window (int) : The time window (in sec) you want your signal to have
+        fs (int) : Your sampling frequency
+
+    Returns:
+        data (Numpy array) : Segmented signal (format : (numpy array shape [number_signal,number_of_time_window,signal_length],dictionnary containing updated physionet metadata))
+    """
+    if not isinstance(fs, int):
+        raise TypeError("Your sampling frequency must be a non null integer")
+    elif fs == 0 or fs < 0:
+        raise ValueError("Your sampling frequency must be strictly positive")
+
+    if not isinstance(time_window, int):
+        raise TypeError("Your time_window must be a non null integer")
+    elif time_window < 0:
+        raise ValueError("Your time_window must be strictly positive")
+
+    N_new = fs * time_window
+    N_res = data.shape[0]
+    if N_res < N_new:
+        raise ValueError(
+            "Please give a time window lower than you signal recording time"
+        )
+    nb_signal = data.shape[1]
+    n = int(N_res / N_new)
+    ## Array containing all the new sample (shape : [nb_signal,nb_chunk,N_new])
+    new_data = np.zeros([nb_signal, n, N_new])
+    for s in range(nb_signal):
+        sig_study = data[:, s]
+        for chunks in range(n):
+            new_data[s, chunks, :] = sig_study[N_new * chunks : N_new * (chunks + 1)]
+    return new_data
+
+
 def format_architecture_data(data, patient_id):
+    """
+    Format the architecture of your Physionet into an xarray
 
-    signal = data[0]
-    meta_data = data[1]
-    new_data = {}
-    new_data["ID"] = patient_id
+    Args:
+        data (Tuple) : Your physionet data at your desired sampling frequency (format : (numpy array shape [number_signal,number_of_time_window,signal_length],dictionnary containing updated physionet metadata))
+        patient_id (String) : The ID number of your patient
+
+    Returns:
+        data (xarray) : xarray format of your data
+    """
+    xr_data = xr.DataArray(data[0], dims=("signal_length", "nb_signal"))
+    xr_data.attrs["ID"] = patient_id
+    for key, value in data[1].items():
+        xr_data.attrs[key] = value
+    return xr_data
 
 
-def get_dataset(name_dataset, ignore_subdfolder=True, fs=None, time_window=None):
+def get_dataset(name_dataset, ignore_subdfolder=True, fs=None):
     """
     Get your physionet dataset (at the desired sampling frequency and time window)
 
@@ -166,24 +184,26 @@ def get_dataset(name_dataset, ignore_subdfolder=True, fs=None, time_window=None)
         name_dataset (String): Name of your physionet dataset
         ignore_subfolder (Boolean : Defaul = True): Boolean if you want to look into any folder inside your physionet dataset
         fs (int : Default = None) : your sampling frequency (in Hz)
-        time_window (int : Default = None) : your time window (in sec)
 
-        For the moment, if you want resampling, you need to give both time_window and fs.
 
     Returns:
-        dataset (Dict) : Dictionnary of all the data present in your physionet dataset
+        dataset (List) : List containing the entire dataset under the xarray format
     """
 
     files = get_name_files(name_dataset, ignore_inner_folder=ignore_subdfolder)
-    dataset = {}
+    dico_data = {}
     path_to_folder = os.path.join(data_path, name_dataset)
     for data in files:
-        dataset[data.split("/")[-1]] = wfdb.rdsamp(os.path.join(path_to_folder, data))
+        dico_data[data.split("/")[-1]] = wfdb.rdsamp(os.path.join(path_to_folder, data))
 
     if fs is not None:
         for data in files:
-            dataset[data.split("/")[-1]] = resampling_data(
-                dataset[data.split("/")[-1]], time_window=time_window, fs=fs
+            dico_data[data.split("/")[-1]] = resampling_data(
+                dico_data[data.split("/")[-1]], fs=fs
             )
+
+    dataset = [
+        format_architecture_data(dico_data[key], key) for key, _ in dico_data.items()
+    ]
 
     return dataset
