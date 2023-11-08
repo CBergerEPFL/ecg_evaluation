@@ -150,6 +150,14 @@ def resampling_data(data_ref, time_window=10, fs=500):
     return tuple(data)
 
 
+def format_architecture_data(data, patient_id):
+
+    signal = data[0]
+    meta_data = data[1]
+    new_data = {}
+    new_data["ID"] = patient_id
+
+
 def get_dataset(name_dataset, ignore_subdfolder=True, fs=None, time_window=None):
     """
     Get your physionet dataset (at the desired sampling frequency and time window)
