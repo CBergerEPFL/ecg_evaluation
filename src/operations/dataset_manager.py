@@ -80,7 +80,7 @@ def resampling_data(data_ref, fs=500):
         fs (int) : Your sampling frequency
 
     Returns:
-        data (Tuple) : Return your physionet data at your desired sampling frequency (format : (numpy array shape [number_signal,number_of_time_window,signal_length],dictionnary containing updated physionet metadata))
+        data (Tuple) : Return your physionet data at your desired sampling frequency (format : (numpy array shape [number_signal,1,signal_length],dictionnary containing updated physionet metadata))
     """
     ##Convert data into a list
     data = list(data_ref)
@@ -103,11 +103,11 @@ def resampling_data(data_ref, fs=500):
     scale = fs / fs_ori
     ##new sample length
     N_res = int(N_old * (scale))
-    resample_data = np.zeros([N_res, nb_signal])
+    resample_data = np.zeros([nb_signal, 1, N_res])
 
     for sig in range(nb_signal):
         sig_to_resamp = data[0][:, sig]
-        resample_data[:, sig] = np.interp(
+        resample_data[sig, 0, :] = np.interp(
             np.linspace(0, time_tot, N_res, endpoint=False),
             np.linspace(0, time_tot, N_old, endpoint=False),
             sig_to_resamp,
@@ -116,7 +116,7 @@ def resampling_data(data_ref, fs=500):
     data[0] = resample_data
     data[1]["sig_len"] = N_res
     data[1]["fs"] = fs
-    return tuple(data)
+    return data
 
 
 def segment_signal(data, fs=500, time_window=10):
@@ -124,12 +124,12 @@ def segment_signal(data, fs=500, time_window=10):
     Segment your signal into multiple sub signal of define time window.
 
     Args:
-        data_ref (Numpy array): Numpy array containing your data (shape : [signal_length,nb_signal])
+        data (List [NUmpy array, dict]): List containing Numpy array containing your data (shape : [nb_signal,1,signal_length]) and a dict with the metadata
         time_window (int) : The time window (in sec) you want your signal to have
         fs (int) : Your sampling frequency
 
     Returns:
-        data (Numpy array) : Segmented signal (format : (numpy array shape [number_signal,number_of_time_window,signal_length],dictionnary containing updated physionet metadata))
+        data (List [NUmpy array, dict]) : List containing Numpy array containing your data (shape : [nb_signal,nb_time_window,signal_length]) and a dict with the metadata
     """
     if not isinstance(fs, int):
         raise TypeError("Your sampling frequency must be a non null integer")
@@ -142,20 +142,22 @@ def segment_signal(data, fs=500, time_window=10):
         raise ValueError("Your time_window must be strictly positive")
 
     N_new = fs * time_window
-    N_res = data.shape[0]
+    N_res = data[0].shape[-1]
     if N_res < N_new:
         raise ValueError(
             "Please give a time window lower than you signal recording time"
         )
-    nb_signal = data.shape[1]
+    nb_signal = data[0].shape[0]
     n = int(N_res / N_new)
     ## Array containing all the new sample (shape : [nb_signal,nb_chunk,N_new])
     new_data = np.zeros([nb_signal, n, N_new])
     for s in range(nb_signal):
-        sig_study = data[:, s]
+        sig_study = data[0][s, 0, :]
         for chunks in range(n):
             new_data[s, chunks, :] = sig_study[N_new * chunks : N_new * (chunks + 1)]
-    return new_data
+    data[0] = new_data
+    data[1]["nb_time_window"] = n
+    return data
 
 
 def format_architecture_data(data, patient_id):
@@ -169,14 +171,20 @@ def format_architecture_data(data, patient_id):
     Returns:
         data (xarray) : xarray format of your data
     """
-    xr_data = xr.DataArray(data[0], dims=("signal_length", "nb_signal"))
-    xr_data.attrs["ID"] = patient_id
+
+    new_data = {}
+    new_data["noun_id"] = patient_id
+    new_data["signal"] = data[0]
     for key, value in data[1].items():
-        xr_data.attrs[key] = value
-    return xr_data
+        if type(value) == list:
+            value = np.asarray(value)
+            if all(isinstance(value[j], str) for j in range(len(value))):
+                value = value.astype(np.bytes_)
+        new_data[key] = value
+    return new_data
 
 
-def get_dataset(name_dataset, ignore_subdfolder=True, fs=None):
+def get_dataset(name_dataset, ignore_subdfolder=True, fs=None, time_window=None):
     """
     Get your physionet dataset (at the desired sampling frequency and time window)
 
@@ -202,6 +210,11 @@ def get_dataset(name_dataset, ignore_subdfolder=True, fs=None):
                 dico_data[data.split("/")[-1]], fs=fs
             )
 
+    if time_window is not None:
+        for data in files:
+            dico_data[data.split("/")[-1]] = segment_signal(
+                dico_data[data.split("/")[-1]], fs=fs, time_window=time_window
+            )
     dataset = [
         format_architecture_data(dico_data[key], key) for key, _ in dico_data.items()
     ]
