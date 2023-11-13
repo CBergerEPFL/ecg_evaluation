@@ -1,11 +1,15 @@
 import numpy as np
 import wfdb
-import argparse
 import os
-import sys
-import warnings
-import xarray as xr
-import pandas as pd
+import findspark
+
+findspark.init()
+from pyspark.sql import SparkSession
+from pyspark.sql.types import StringType, IntegerType
+from petastorm.unischema import Unischema, UnischemaField, dict_to_spark_row
+from petastorm.etl.dataset_metadata import materialize_dataset
+from petastorm import make_reader
+
 
 ##Custom import
 from shared_utils.utils_path import data_path
@@ -116,6 +120,7 @@ def resampling_data(data_ref, fs=500):
     data[0] = resample_data
     data[1]["sig_len"] = N_res
     data[1]["fs"] = fs
+    data[1]["nb_time_window"] = 1
     return data
 
 
@@ -124,7 +129,7 @@ def segment_signal(data, fs=500, time_window=10):
     Segment your signal into multiple sub signal of define time window.
 
     Args:
-        data (List [NUmpy array, dict]): List containing Numpy array containing your data (shape : [nb_signal,1,signal_length]) and a dict with the metadata
+        data (List [Numpy array, dict]): List containing Numpy array containing your data (shape : [nb_signal,1,signal_length]) and a dict with the metadata
         time_window (int) : The time window (in sec) you want your signal to have
         fs (int) : Your sampling frequency
 
@@ -195,7 +200,7 @@ def get_dataset(name_dataset, ignore_subdfolder=True, fs=None, time_window=None)
 
 
     Returns:
-        dataset (List) : List containing the entire dataset under the xarray format
+        dataset (List) : List containing the entire dataset (list of dictionary)
     """
 
     files = get_name_files(name_dataset, ignore_inner_folder=ignore_subdfolder)
@@ -220,3 +225,37 @@ def get_dataset(name_dataset, ignore_subdfolder=True, fs=None, time_window=None)
     ]
 
     return dataset
+
+
+def get_path_petastorm_format(name_dataset, name_folder):
+    save_path = os.path.join(data_path, name_dataset, name_folder)
+    if not os.path.isdir(save_path):
+        os.mkdir(save_path)
+    path_petastorm = f"file://{save_path}"
+    return path_petastorm
+
+
+def save_to_parquet_petastorm(
+    dataset, name_dataset, sparksession, schema, row_generator
+):
+
+    ## Parameter initialization
+    row_group_size_mb = 256
+    sc = sparksession.sparkContext
+    range_dataset = range(len(dataset))
+
+    ## Path to save parquet
+
+    path_petastorm = get_path_petastorm_format(name_dataset, "ParquetFile")
+
+    ##Now : let's save the dataset into Parquet
+    with materialize_dataset(sparksession, path_petastorm, schema, row_group_size_mb):
+        rows_rdd = (
+            sc.parallelize(range_dataset)
+            .map(row_generator)
+            .map(lambda x: dict_to_spark_row(schema, x))
+        )
+
+        sparksession.createDataFrame(rows_rdd, schema.as_spark_schema()).coalesce(
+            10
+        ).write.mode("overwrite").parquet(path_petastorm)
