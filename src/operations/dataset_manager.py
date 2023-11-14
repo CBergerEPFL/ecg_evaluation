@@ -203,7 +203,7 @@ def get_dataset(name_dataset, ignore_subdfolder=True, fs=None, time_window=None)
     """
 
     files = get_name_files(name_dataset, ignore_inner_folder=ignore_subdfolder)
-    print(files)
+    print("The following files will be in the dataset : ", files)
     dico_data = {}
     path_to_folder = os.path.join(data_path, name_dataset)
     for data in files:
