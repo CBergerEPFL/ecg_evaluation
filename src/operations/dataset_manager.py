@@ -5,10 +5,8 @@ import findspark
 
 findspark.init()
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StringType, IntegerType
-from petastorm.unischema import Unischema, UnischemaField, dict_to_spark_row
+from petastorm.unischema import dict_to_spark_row
 from petastorm.etl.dataset_metadata import materialize_dataset
-from petastorm import make_reader
 
 
 ##Custom import
@@ -134,7 +132,7 @@ def segment_signal(data, fs=500, time_window=10):
         fs (int) : Your sampling frequency
 
     Returns:
-        data (List [NUmpy array, dict]) : List containing Numpy array containing your data (shape : [nb_signal,nb_time_window,signal_length]) and a dict with the metadata
+        data (List [Numpy array, dict]) : List containing Numpy array containing your data (shape : [nb_signal,nb_time_window,signal_length]) and a dict with the metadata
     """
     if not isinstance(fs, int):
         raise TypeError("Your sampling frequency must be a non null integer")
@@ -161,6 +159,7 @@ def segment_signal(data, fs=500, time_window=10):
         for chunks in range(n):
             new_data[s, chunks, :] = sig_study[N_new * chunks : N_new * (chunks + 1)]
     data[0] = new_data
+    data[1]["sig_len"] = N_new
     data[1]["nb_time_window"] = n
     return data
 
@@ -204,6 +203,7 @@ def get_dataset(name_dataset, ignore_subdfolder=True, fs=None, time_window=None)
     """
 
     files = get_name_files(name_dataset, ignore_inner_folder=ignore_subdfolder)
+    print(files)
     dico_data = {}
     path_to_folder = os.path.join(data_path, name_dataset)
     for data in files:
@@ -228,6 +228,17 @@ def get_dataset(name_dataset, ignore_subdfolder=True, fs=None, time_window=None)
 
 
 def get_path_petastorm_format(name_dataset, name_folder):
+
+    """
+    Create a save path variable towards a desired folder, with the format adapted for petastorm.
+
+    Args:
+        name_datast (String): Name of your dataset (no a path to a directorie. Just the name of the dataset)
+        name_folder (String) : Name of the folder where you want to save your petastorm data
+
+    Returns:
+        path_petastorm (String) : Formated path toward the folder where to save dataset.
+    """
     save_path = os.path.join(data_path, name_dataset, name_folder)
     if not os.path.isdir(save_path):
         os.mkdir(save_path)
@@ -238,6 +249,18 @@ def get_path_petastorm_format(name_dataset, name_folder):
 def save_to_parquet_petastorm(
     dataset, name_dataset, sparksession, schema, row_generator
 ):
+
+    """
+    Save your dataset into petastorm adapted parquet file, given your Unischema.
+
+    Args:
+        dataset (List) : List containing the entire dataset (list of dictionary)
+        name_datast (String): Name of your dataset (no a path to a directorie. Just the name of the dataset)
+        sparksession (SparkSession.builder) : The spark session your are using.
+        schema (Petastorm Unischema) : The Unischema you want to use
+        row_generator (function) : The row generator function for accessing one data of your dataset.
+
+    """
 
     ## Parameter initialization
     row_group_size_mb = 256
