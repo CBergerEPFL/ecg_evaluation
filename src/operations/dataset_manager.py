@@ -173,7 +173,7 @@ def format_architecture_data(data, patient_id):
         patient_id (String) : The ID number of your patient
 
     Returns:
-        data (xarray) : xarray format of your data
+        data (Dict) : Dictionnary format of your data
     """
 
     new_data = {}
