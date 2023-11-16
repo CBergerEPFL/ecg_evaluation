@@ -123,6 +123,80 @@ def format_data_to_xarray_2020(data_path: str, save_path: str | None = None):
     return ds_ecg
 
 
+def format_data_to_xarray_mit_bih_test(data_path: str, save_path: str | None = None):
+    """Format data to xarray format.This is the same function as before but adapted for the Classification of 12-leads ECGgs ; the physionet/computing in Cardiology Challenge 2020” dataset
+
+    Args:
+        data_path (str): Path to data.
+        save_path (str): Path to save data. If save_path is not None, data will be saved to save_path.
+
+    Returns:
+        ds_ecg (xarray): Data in xarray format.
+    """
+    if (save_path is not None) and (not os.path.exists(save_path)):
+        os.makedirs(save_path)
+
+    if "file://" not in data_path:
+        path_petastorm = f"file:///{data_path}"
+    else:
+        path_petastorm = data_path
+
+    array_signal = []
+    array_name = []
+    array_fs = []
+    array_signal_name = []
+    array_units = []
+    array_nb_sig = []
+    array_nb_time_window = []
+    array_number_signal = []
+    with make_reader(path_petastorm) as reader:
+        for sample in reader:
+            if len(sample.signal[0, 0, :]) != 5000:
+                continue
+
+            array_signal.append(
+                sample.signal.reshape(
+                    (sample.nb_time_window * sample.n_sig, sample.sig_len)
+                )
+            )
+            array_name.append(sample.noun_id.decode("utf-8"))
+            array_fs.append(sample.fs)
+            array_signal_name.append(
+                [
+                    sample.sig_name[j].decode("utf-8")
+                    for j in range(len(sample.sig_name))
+                ]
+            )
+            array_units.append(
+                [sample.units[j].decode("utf-8") for j in range(len(sample.units))]
+            )
+            array_nb_sig.append(sample.n_sig)
+            array_nb_time_window.append(sample.nb_time_window)
+            array_number_signal.append(sample.n_sig * sample.nb_time_window)
+
+    ds_ecg = xr.Dataset(
+        data_vars=dict(
+            signal=(["id", "n_sig*nb_time_window", "time"], np.array(array_signal)),
+            fs=(["id"], np.array(array_fs)),
+            signal_names=(["id", "signal_names"], np.array(array_signal_name)),
+            units=(["id", "units"], np.array(array_units)),
+            n_time_window=(["id"], np.array(array_nb_time_window)),
+            n_sig=(["id"], np.array(array_nb_sig)),
+            number_signal=(["id"], np.array(array_number_signal)),
+        ),
+        coords=dict(
+            id=(["id"], np.array(array_name)),
+            time=(["time"], np.arange(0, 5000)),
+        ),
+        attrs=dict(description="ecg with real noise data"),
+    )
+
+    if save_path is not None:
+        ds_ecg.to_netcdf(os.path.join(save_path, "ecg_data_mit_bih_noise_test.nc"))
+
+    return ds_ecg
+
+
 def feature_checker(df_features: pd.DataFrame) -> bool:
     """Function that check if the features in your feature dataset have the
         good range ([0;1]) in your columns set

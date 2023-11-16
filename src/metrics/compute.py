@@ -86,15 +86,28 @@ def save_metrics_to_xarray(
     np_metrics = compute_metrics(
         signal, fs, list_methods, normalization=True, verbose=verbose
     )
-    da_metric = xr.DataArray(
-        np_metrics,
-        dims=["id", "lead_names", "metric_name"],
-        coords=[ds_data.id, ds_data.lead_names, list_methods],
-    )
+    if signal.shape[1] > 12:
+
+        da_metric = xr.DataArray(
+            np_metrics,
+            dims=["id", "n_sig*nb_time_window", "metric_name"],
+            coords=[ds_data.id, ds_data.number_signal, list_methods],
+        )
+        save_name_metric = "mit_bih_noise_test_metrics.nc"
+    else:
+        da_metric = xr.DataArray(
+            np_metrics,
+            dims=["id", "lead_names", "metric_name"],
+            coords=[ds_data.id, ds_data.lead_names, list_methods],
+        )
+
     ds_data["quality_metrics"] = da_metric
 
     if save_path is not None:
-        path_to_file = os.path.join(save_path, "quality_metrics.nc")
+        if signal.shape[1] > 12:
+            path_to_file = os.path.join(save_path, save_name_metric)
+        else:
+            path_to_file = os.path.join(save_path, "quality_metrics.nc")
         print(f"Saving computed metrics in netCDF format in: {path_to_file}")
         ds_data.to_netcdf(path_to_file)
 

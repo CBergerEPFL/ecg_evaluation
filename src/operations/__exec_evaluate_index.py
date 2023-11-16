@@ -24,7 +24,7 @@ def main():
         "wPMF",
         "SNRECG",
         "HR",
-        # "Kurtosis",
+        "Kurtosis",
         "Flatline",
         "TSD",
     ]
