@@ -151,12 +151,12 @@ def format_data_to_xarray_mit_bih_test(data_path: str, save_path: str | None = N
     array_number_signal = []
     with make_reader(path_petastorm) as reader:
         for sample in reader:
-            if len(sample.signal[0, 0, :]) != 5000:
+            if len(sample.signal[0, :, 0]) != 5000:
                 continue
 
             array_signal.append(
                 sample.signal.reshape(
-                    (sample.nb_time_window * sample.n_sig, sample.sig_len)
+                    (sample.sig_len, sample.nb_time_window * sample.n_sig)
                 )
             )
             array_name.append(sample.noun_id.decode("utf-8"))
@@ -176,7 +176,14 @@ def format_data_to_xarray_mit_bih_test(data_path: str, save_path: str | None = N
 
     ds_ecg = xr.Dataset(
         data_vars=dict(
-            signal=(["id", "n_sig*nb_time_window", "time"], np.array(array_signal)),
+            signal=(
+                [
+                    "id",
+                    "time",
+                    "n_sig*nb_time_window",
+                ],
+                np.array(array_signal),
+            ),
             fs=(["id"], np.array(array_fs)),
             signal_names=(["id", "signal_names"], np.array(array_signal_name)),
             units=(["id", "units"], np.array(array_units)),

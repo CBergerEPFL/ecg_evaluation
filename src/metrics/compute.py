@@ -91,7 +91,13 @@ def save_metrics_to_xarray(
         da_metric = xr.DataArray(
             np_metrics,
             dims=["id", "n_sig*nb_time_window", "metric_name"],
-            coords=[ds_data.id, ds_data.number_signal, list_methods],
+            coords=[
+                ds_data.id,
+                np.array(
+                    [f"segment_{j+1}" for j in range(ds_data.number_signal.values[0])]
+                ),
+                list_methods,
+            ],
         )
         save_name_metric = "mit_bih_noise_test_metrics.nc"
     else:

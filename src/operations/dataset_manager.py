@@ -1,9 +1,6 @@
 import numpy as np
 import wfdb
 import os
-import findspark
-
-findspark.init()
 from pyspark.sql import SparkSession
 from petastorm.unischema import dict_to_spark_row
 from petastorm.etl.dataset_metadata import materialize_dataset
@@ -105,11 +102,11 @@ def resampling_data(data_ref, fs=500):
     scale = fs / fs_ori
     ##new sample length
     N_res = int(N_old * (scale))
-    resample_data = np.zeros([nb_signal, 1, N_res])
+    resample_data = np.zeros([nb_signal, N_res, 1])
 
     for sig in range(nb_signal):
-        sig_to_resamp = data[0][:, sig]
-        resample_data[sig, 0, :] = np.interp(
+        sig_to_resamp = data[0][sig, :, 0]
+        resample_data[sig, :, 0] = np.interp(
             np.linspace(0, time_tot, N_res, endpoint=False),
             np.linspace(0, time_tot, N_old, endpoint=False),
             sig_to_resamp,
@@ -118,7 +115,6 @@ def resampling_data(data_ref, fs=500):
     data[0] = resample_data
     data[1]["sig_len"] = N_res
     data[1]["fs"] = fs
-    data[1]["nb_time_window"] = 1
     return data
 
 
@@ -145,7 +141,7 @@ def segment_signal(data, fs=500, time_window=10):
         raise ValueError("Your time_window must be strictly positive")
 
     N_new = fs * time_window
-    N_res = data[0].shape[-1]
+    N_res = data[0].shape[1]
     if N_res < N_new:
         raise ValueError(
             "Please give a time window lower than you signal recording time"
@@ -153,11 +149,11 @@ def segment_signal(data, fs=500, time_window=10):
     nb_signal = data[0].shape[0]
     n = int(N_res / N_new)
     ## Array containing all the new sample (shape : [nb_signal,nb_chunk,N_new])
-    new_data = np.zeros([nb_signal, n, N_new])
+    new_data = np.zeros([nb_signal, N_new, n])
     for s in range(nb_signal):
-        sig_study = data[0][s, 0, :]
+        sig_study = data[0][s, :, 0]
         for chunks in range(n):
-            new_data[s, chunks, :] = sig_study[N_new * chunks : N_new * (chunks + 1)]
+            new_data[s, :, chunks] = sig_study[N_new * chunks : N_new * (chunks + 1)]
     data[0] = new_data
     data[1]["sig_len"] = N_new
     data[1]["nb_time_window"] = n
@@ -185,6 +181,7 @@ def format_architecture_data(data, patient_id):
             if all(isinstance(value[j], str) for j in range(len(value))):
                 value = value.astype(np.bytes_)
         new_data[key] = value
+
     return new_data
 
 
@@ -207,7 +204,12 @@ def get_dataset(name_dataset, ignore_subdfolder=True, fs=None, time_window=None)
     dico_data = {}
     path_to_folder = os.path.join(data_path, name_dataset)
     for data in files:
-        dico_data[data.split("/")[-1]] = wfdb.rdsamp(os.path.join(path_to_folder, data))
+        d = wfdb.rdsamp(os.path.join(path_to_folder, data))
+        signal = np.transpose(d[0])
+        signal = signal[:, :, np.newaxis]
+        metadata = d[1].copy()
+        metadata["nb_time_window"] = 1
+        dico_data[data.split("/")[-1]] = (signal, metadata)
 
     if fs is not None:
         for data in files:
@@ -278,7 +280,8 @@ def save_to_parquet_petastorm(
             .map(row_generator)
             .map(lambda x: dict_to_spark_row(schema, x))
         )
-
+        print("check!")
         sparksession.createDataFrame(rows_rdd, schema.as_spark_schema()).coalesce(
             10
         ).write.mode("overwrite").parquet(path_petastorm)
+        print("done")
