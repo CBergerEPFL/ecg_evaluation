@@ -280,8 +280,6 @@ def save_to_parquet_petastorm(
             .map(row_generator)
             .map(lambda x: dict_to_spark_row(schema, x))
         )
-        print("check!")
         sparksession.createDataFrame(rows_rdd, schema.as_spark_schema()).coalesce(
             10
         ).write.mode("overwrite").parquet(path_petastorm)
-        print("done")

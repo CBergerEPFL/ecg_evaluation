@@ -19,6 +19,15 @@ from shared_utils.utils_type import Results_Data
 def evaluate_index(
     df_index: pd.DataFrame, df_label: pd.DataFrame, save_name=None, thres_metric=None
 ):
+
+    """Evaluate and compute metrics of a list of indices.
+
+    Args:
+        df_index (Pandas Dataframe) : Dataframe containing the indexes vaues for each patient (and each lead).
+        df_label (Pandas Dataframe) : Dataframe containing the quality label associated to each patient (for the 12 ECG lead).
+        save_name (String) : Name of folder where you want to save your results.
+        thres_metric (Float) : Threshold value given by the user (Default : None).
+    """
     if df_index.shape[1] > 1:
         raise ValueError(
             "One index is evaluated at each pass. df_index must have only one column"
