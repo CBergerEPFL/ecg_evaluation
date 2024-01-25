@@ -30,7 +30,7 @@ def main():
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
-    ds_data = utils_data.format_data_to_xarray_mit_bih_test(path_petastorm, save_path)
+    ds_data = utils_data.format_data_to_xarray(path_petastorm, save_path)
 
     name_method_required = [
         "Corr_interlead",
