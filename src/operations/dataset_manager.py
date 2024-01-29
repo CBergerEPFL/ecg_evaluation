@@ -1,13 +1,19 @@
 import numpy as np
+from numpy.random import seed
 import wfdb
 import os
 from pyspark.sql import SparkSession
 from petastorm.unischema import dict_to_spark_row
 from petastorm.etl.dataset_metadata import materialize_dataset
 
-
 ##Custom import
 from shared_utils.utils_path import data_path
+
+##Set seed :
+
+seed(1)
+
+##Functions
 
 
 def add_file_condition(path, file):
@@ -29,7 +35,24 @@ def add_file_condition(path, file):
     )
 
 
-def get_name_files(name_dataset, ignore_inner_folder):
+def has_numbers(inputString, want_noise_data):
+    """
+       Check if string variable has number (int) in it, only if the user wants only the noisy data
+
+        Args:
+            name_dataset (String): String to check if there is number (int number)
+            want_noise_data (Boolean) : Boolean indicating if the user want only the noise data
+
+    Returns:
+        (Bool): Boolean indicating if there is a number in it.
+    """
+    if want_noise_data:
+        return any(char.isdigit() for char in inputString)
+    else:
+        return False
+
+
+def get_name_files(name_dataset, ignore_inner_folder, only_noise_data):
 
     """
     Get the name of all the files present in your Physionet dataset. If needed, it takes care of other data present in folder inside it.
@@ -44,12 +67,14 @@ def get_name_files(name_dataset, ignore_inner_folder):
     path_to_folder = os.path.join(data_path, name_dataset)
     if not os.path.isdir(path_to_folder):
         raise OSError("Please indicate the correct name of your dataset!")
+
     if ignore_inner_folder:
         files = np.array(
             [
                 f.split(".")[0]
                 for f in os.listdir(path_to_folder)
                 if add_file_condition(path_to_folder, f)
+                and not has_numbers(f, only_noise_data)
             ]
         )
     else:
@@ -58,10 +83,14 @@ def get_name_files(name_dataset, ignore_inner_folder):
             if os.path.isdir(os.path.join(path_to_folder, f)):
                 new_path = os.path.join(path_to_folder, f)
                 for f1 in os.listdir(new_path):
-                    if add_file_condition(new_path, f1):
+                    if add_file_condition(new_path, f1) and not has_numbers(
+                        os.path.join(f, f1), only_noise_data
+                    ):
                         files = np.append(files, os.path.join(f, f1).split(".")[0])
             else:
-                if add_file_condition(path_to_folder, f):
+                if add_file_condition(path_to_folder, f) and not has_numbers(
+                    f, only_noise_data
+                ):
                     files = np.append(files, f.split(".")[0])
 
     files = np.unique(files)
@@ -75,7 +104,6 @@ def resampling_data(data_ref, fs=500):
 
     Args:
         data_ref (Tuple): Tuple containing your physionet data
-        time_window (int) : The time window (in sec) you want your signal to have
         fs (int) : Your sampling frequency
 
     Returns:
@@ -83,7 +111,7 @@ def resampling_data(data_ref, fs=500):
     """
     ##Convert data into a list
     data = list(data_ref)
-    ## Check sampling frequency and time window given
+    ## Check sampling frequency
     if not isinstance(fs, int):
         raise TypeError("Your sampling frequency must be a non null integer")
     elif fs == 0 or fs < 0:
@@ -160,32 +188,100 @@ def segment_signal(data, fs=500, time_window=10):
     return data
 
 
-def format_architecture_data(data, patient_id):
+def format_architecture_data(data):
     """
-    Format the architecture of your Physionet into an xarray
+    Format the architecture of your Physionet into an list fo dictionnaries
 
     Args:
         data (Tuple) : Your physionet data at your desired sampling frequency (format : (numpy array shape [number_signal,number_of_time_window,signal_length],dictionnary containing updated physionet metadata))
-        patient_id (String) : The ID number of your patient
+
+    Returns:
+        dataset (List) : List containing all the data in the dictionnary format
+    """
+
+    dataset = []
+    for keys, values in data.items():
+        signal = values[0]
+        metadata = values[1]
+        for sn in range(len(metadata["sig_name"])):
+            new_data = {}
+            new_data["noun_id"] = f"{keys}_{metadata['sig_name'][sn]}"
+            new_data["signal"] = signal[sn, :, :]
+            for key, value in values[1].items():
+                if type(value) == list:
+                    value = np.asarray(value)
+                    if all(isinstance(value[j], str) for j in range(len(value))):
+                        value = value.astype(np.bytes_)
+                new_data[key] = value
+            new_data["sig_name"] = np.asarray([metadata["sig_name"][sn]]).astype(
+                np.bytes_
+            )
+            dataset.append(new_data)
+
+    return dataset
+
+
+def format_architecture_data_noisy(data, N_lead=12):
+    """
+    Format the architecture of your Physionet into a dict adapated for noisy dataset.
+
+    Args:
+        data (Tuple) : Your physionet data at your desired sampling frequency (format : (numpy array shape [number_signal,number_of_time_window,signal_length],dictionnary containing updated physionet metadata))
+        N_lead (int) : The number of fake lead to create (Default : 12)
 
     Returns:
         data (Dict) : Dictionnary format of your data
     """
+    dataset = []
+    for keys, values in data.items():
+        signals = values[0]
+        metadata = values[1]
 
-    new_data = {}
-    new_data["noun_id"] = patient_id
-    new_data["signal"] = data[0]
-    for key, value in data[1].items():
-        if type(value) == list:
-            value = np.asarray(value)
-            if all(isinstance(value[j], str) for j in range(len(value))):
-                value = value.astype(np.bytes_)
-        new_data[key] = value
+        ## Adapt metadata :
+        metadata["units"] = ["mV"] * N_lead
+        metadata["sig_name"] = [f"S{i}" for i in range(1, N_lead + 1)]
+        metadata["comments"] = [
+            f"Patient created using randomly selected segments from {keys}'s signal "
+        ]
+        metadata["n_sig"] = N_lead
+        metadata["nb_time_window"] = 1
 
-    return new_data
+        nb_patient = int((signals.shape[0] * signals.shape[2]) / N_lead)
+        index_segment = np.random.randint(
+            0, signals.shape[2], signals.shape[0] * signals.shape[2]
+        )
+        index_lead_sel = np.random.randint(
+            0, signals.shape[0], signals.shape[0] * signals.shape[2]
+        )
+        for i, j in zip(
+            range(nb_patient), range(0, signals.shape[0] * signals.shape[2], N_lead)
+        ):
+            new_data = {}
+            new_data["noun_id"] = f"{keys}_{i}"
+            new_data["signal"] = np.transpose(
+                signals[
+                    index_lead_sel[j : j + N_lead], :, index_segment[j : j + N_lead]
+                ]
+            )
+            for key, value in metadata.items():
+                if type(value) == list:
+                    value = np.asarray(value)
+                    if all(isinstance(value[j], str) for j in range(len(value))):
+                        value = value.astype(np.bytes_)
+                new_data[key] = value
+
+            dataset.append(new_data)
+    return dataset
 
 
-def get_dataset(name_dataset, ignore_subdfolder=True, fs=None, time_window=None):
+def get_dataset(
+    name_dataset,
+    ignore_subdfolder=True,
+    only_noise_data=False,
+    fs=None,
+    time_window=None,
+    N_lead=12,
+):
     """
     Get your physionet dataset (at the desired sampling frequency and time window)
 
@@ -193,13 +289,18 @@ def get_dataset(name_dataset, ignore_subdfolder=True, fs=None, time_window=None)
         name_dataset (String): Name of your physionet dataset
         ignore_subfolder (Boolean : Defaul = True): Boolean if you want to look into any folder inside your physionet dataset
         fs (int : Default = None) : your sampling frequency (in Hz)
+        time_window (int : Default = None) : The time window lenght you want your signal to have.
 
 
     Returns:
         dataset (List) : List containing the entire dataset (list of dictionary)
     """
 
-    files = get_name_files(name_dataset, ignore_inner_folder=ignore_subdfolder)
+    files = get_name_files(
+        name_dataset,
+        ignore_inner_folder=ignore_subdfolder,
+        only_noise_data=only_noise_data,
+    )
     print("The following files will be in the dataset : ", files)
     dico_data = {}
     path_to_folder = os.path.join(data_path, name_dataset)
@@ -222,11 +323,12 @@ def get_dataset(name_dataset, ignore_subdfolder=True, fs=None, time_window=None)
             dico_data[data.split("/")[-1]] = segment_signal(
                 dico_data[data.split("/")[-1]], fs=fs, time_window=time_window
             )
-    dataset = [
-        format_architecture_data(dico_data[key], key) for key, _ in dico_data.items()
-    ]
 
-    return dataset
+    if only_noise_data:
+        return format_architecture_data_noisy(dico_data, N_lead=N_lead)
+
+    else:
+        return format_architecture_data(dico_data)
 
 
 def get_path_petastorm_format(name_dataset, name_folder):
@@ -249,7 +351,7 @@ def get_path_petastorm_format(name_dataset, name_folder):
 
 
 def save_to_parquet_petastorm(
-    dataset, name_dataset, sparksession, schema, row_generator
+    dataset, name_dataset, sparksession, schema, row_generator, noise_data=False
 ):
 
     """
@@ -270,9 +372,10 @@ def save_to_parquet_petastorm(
     range_dataset = range(len(dataset))
 
     ## Path to save parquet
-
-    path_petastorm = get_path_petastorm_format(name_dataset, "ParquetFile")
-
+    if noise_data:
+        path_petastorm = get_path_petastorm_format(name_dataset, "ParquetFileNoise")
+    else:
+        path_petastorm = get_path_petastorm_format(name_dataset, "ParquetFile")
     ##Now : let's save the dataset into Parquet
     with materialize_dataset(sparksession, path_petastorm, schema, row_group_size_mb):
         rows_rdd = (
