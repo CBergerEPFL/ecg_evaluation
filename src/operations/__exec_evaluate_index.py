@@ -24,11 +24,11 @@ def main():
         "wPMF",
         "SNRECG",
         "HR",
-        "Kurtosis",
+        # "Kurtosis",
         "Flatline",
         "TSD",
     ]
-    evaluate_list_indices(input_data_path, list_features)
+    evaluate_list_indices(input_data_path, list_features, aggregation_methods="min")
 
 
 if __name__ == "__main__":

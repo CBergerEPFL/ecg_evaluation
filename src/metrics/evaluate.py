@@ -55,7 +55,7 @@ def evaluate_index(
     )
 
 
-def evaluate_list_indices(input_data_path, list_features):
+def evaluate_list_indices(input_data_path, list_features, aggregation_methods="mean"):
     """Evaluate a list of indices
 
     Args:
@@ -65,6 +65,10 @@ def evaluate_list_indices(input_data_path, list_features):
     ds_metrics = xr.load_dataset(input_data_path)
     pbar = tqdm(list_features)
     for feature in pbar:
-        pbar.set_description(f"Evaluating {feature}")
-        df_X, df_y = extract_index_label(ds_metrics, feature)
-        evaluate_index(df_X, df_y, save_name=feature, thres_metric=None)
+        pbar.set_description(f"Evaluating {feature} using {aggregation_methods}")
+        df_X, df_y = extract_index_label(
+            ds_metrics, feature, aggregation_method=aggregation_methods
+        )
+        evaluate_index(
+            df_X, df_y, save_name=feature + f"_{aggregation_methods}", thres_metric=None
+        )
