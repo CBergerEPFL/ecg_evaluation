@@ -635,3 +635,52 @@ def plt_TSDvsNoise(noise_lev, path_to_data, attractors_sel):
     plt.ylim([1.9, 2.1])
     plt.grid()
     plt.show()
+
+
+def Comparative_lead_plot(
+    Synth_data,
+    Acc_data,
+    Unacc_data,
+    SD_synth,
+    SD_acc,
+    SD_unacc,
+    S_level,
+    name_lead,
+    name="TSD",
+):
+    fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(20, 10))
+    # plt.rcParams.update({'font.size':20})
+    fig.tight_layout(h_pad=4)
+    coordinates = [(0, y) for y in range(3)]
+    for i, c in zip(name_lead[:3], coordinates):
+
+        lead_synth, lead_acc, lead_unacc = Synth_data[i], Acc_data[i], Unacc_data[i]
+        e_synth, e_acc, e_unacc = SD_synth[i], SD_acc[i], SD_unacc[i]
+        if c[1] == 0:
+            ax[c[1]].errorbar(S_level, lead_synth, e_synth, label=" Synthethic lead ")
+            ax[c[1]].errorbar(S_level, lead_acc, e_acc, label=" Acceptable lead ")
+            ax[c[1]].errorbar(S_level, lead_unacc, e_unacc, label=" Unacceptable lead ")
+        else:
+            ax[c[1]].errorbar(S_level, lead_synth, e_synth)
+            ax[c[1]].errorbar(S_level, lead_acc, e_acc)
+            ax[c[1]].errorbar(S_level, lead_unacc, e_unacc)
+
+        ax[c[1]].set_xlabel("SNR (db)")
+        ax[c[1]].set_ylabel(f"mean {name} value")
+        ax[c[1]].set_title(f"Lead {i.decode('utf8')}")
+        ax[c[1]].grid()
+    handles, labels = ax[0].get_legend_handles_labels()
+    plt.figlegend(
+        handles,
+        labels,
+        loc=(0.84, 0.7),
+        labelspacing=1.0,
+        handletextpad=0.0,
+        handlelength=1.5,
+        fancybox=True,
+        shadow=True,
+    )
+    fig.suptitle(
+        f"{name} vs SNR (dB) for average {name} value for 100 patients", fontsize=20
+    )
+    fig.subplots_adjust(top=0.90)

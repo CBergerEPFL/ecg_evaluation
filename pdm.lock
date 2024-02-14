@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["cross_platform"]
 lock_version = "4.4"
-content_hash = "sha256:8310d281d510829503f8bb0d3f48976945678b9d6b109769b3e0037512dea7fe"
+content_hash = "sha256:b04aea2afc414a5fc5cd6b6136d0ccd9b28dca8f9e9d9df69062cb959821477d"
 
 [[package]]
 name = "alembic"
@@ -834,6 +834,22 @@ summary = "Experimental type system extensions for programs checked with the myp
 files = [
     {file = "mypy_extensions-0.4.3-py2.py3-none-any.whl", hash = "sha256:090fedd75945a69ae91ce1303b5824f428daf5a028d2f6ab8a299250a846f15d"},
     {file = "mypy_extensions-0.4.3.tar.gz", hash = "sha256:2d82818f5bb3e369420cb3c4060a7970edba416647068eb4c5343488a6c604a8"},
+]
+
+[[package]]
+name = "neurokit2"
+version = "0.2.7"
+summary = "The Python Toolbox for Neurophysiological Signal Processing."
+dependencies = [
+    "matplotlib",
+    "numpy",
+    "pandas",
+    "scikit-learn>=1.0.0",
+    "scipy",
+]
+files = [
+    {file = "neurokit2-0.2.7-py2.py3-none-any.whl", hash = "sha256:960412136d42ec02eca21b20de2f4ba2bce1d9eeabb34153b2e962682ff2ca42"},
+    {file = "neurokit2-0.2.7.tar.gz", hash = "sha256:f7c1fad4536a5491d136681fc44ea814cfc563409198002dd2389ea409b3ab67"},
 ]
 
 [[package]]

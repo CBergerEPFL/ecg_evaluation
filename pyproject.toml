@@ -30,6 +30,7 @@ dependencies = [
     "pyspark>=3.5.0",
     "findspark>=2.0.1",
     "wfdb>=4.1.2",
+    "neurokit2>=0.2.7",
 ]
 requires-python = ">=3.10"
 license = {text = "MIT"}
