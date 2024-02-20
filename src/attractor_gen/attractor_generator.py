@@ -186,6 +186,8 @@ def compute_attractor_3d(attractor, x0, y0, z0, dt, num_steps, var_params):
     t0 = 0.0
     ind_tfin = num_steps * dt - t0
     y_init = D.array([x0, y0, z0])
+    print(y_init)
+    print(ind_tfin)
     rhs = attractor
     if var_params:
         dict_parameters = return_attractors_parameters(attractor)
@@ -198,6 +200,7 @@ def compute_attractor_3d(attractor, x0, y0, z0, dt, num_steps, var_params):
             atol=1e-9,
             constants=dict_parameters,
         )
+
     else:
         a = de.OdeSystem(
             rhs, y0=y_init, dense_output=True, t=(t0, ind_tfin), rtol=1e-9, atol=1e-9
@@ -205,12 +208,12 @@ def compute_attractor_3d(attractor, x0, y0, z0, dt, num_steps, var_params):
 
     a.method = "RK45CK"
     a.integrate()
-
     t_ode = a.t
     dt = 0.01
     t = np.arange(t_ode[0], t_ode[-1], dt)
     interp = interp1d(t_ode, a.y, kind="cubic", axis=0)
     coordinates = interp(t)
+    print(coordinates)
     return coordinates, t
 
 

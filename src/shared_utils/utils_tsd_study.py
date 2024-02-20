@@ -1,6 +1,39 @@
 import numpy as np
-import matplotlib as plt
+import matplotlib.pyplot as plt
+import pandas as pd
+from scipy.fftpack import rfft, irfft
 from numba import njit
+
+
+def plot_attractor_timevscoord(dico_xyzs, t, name):
+    for i in name:
+        plt.plot(t, dico_xyzs[i], label=i)
+        plt.xlabel("time")
+        plt.ylabel("function value")
+        plt.legend(loc="best", bbox_to_anchor=(1, 1))
+        plt.grid()
+        plt.plot()
+
+
+def Plot_attractors(xyzs_attractor, name_attractor):
+    ax = plt.figure().add_subplot(projection="3d")
+
+    ax.plot(*xyzs_attractor.T, lw=0.5)
+    ax.set_xlabel("X Axis")
+    ax.set_ylabel("Y Axis")
+    ax.set_zlabel("Z Axis")
+    ax.set_title(f"{name_attractor} Attractor")
+
+    plt.show()
+
+
+def system_coordinates_reader(Path_to_data, Attractor_name, num_attractor=0):
+    path = Path_to_data + f"/{Attractor_name}_attractors"
+    df = pd.read_csv(path + ".csv")
+    df_n = df.to_numpy()
+    xyzs = df_n[:, 1:4]
+    t = df_n[:, 0]
+    return xyzs, t
 
 
 def add_observational_noise(sig, SNR):
@@ -12,6 +45,17 @@ def add_observational_noise(sig, SNR):
     noise = np.random.normal(0, np.sqrt(sd_db_watts), len(sig))
     sig_noisy = sig + noise
     return sig_noisy
+
+
+def add_observational_noise_val(sig, SNR):
+    Power_sig = np.mean(np.abs(sig) ** 2)
+    P_db = 10 * np.log10(Power_sig)
+    noisedb = P_db - SNR
+    sd_db_watts = 10 ** (noisedb / 10)
+    # sd_noise = np.sqrt(Power_sig/(SNR))
+    noise = np.random.normal(0, np.sqrt(sd_db_watts), (len(sig), 3))
+    # sig_noisy = sig+noise
+    return noise
 
 
 @njit
@@ -173,6 +217,36 @@ def Interval_calculator_lead(signal, fs, t0=0):
     return dic_segment_lead
 
 
+def get_interval_length_c_val(dico_xyzs, t, name, fs_l):
+    for i in name:
+        I1_c, I2_c, c = discrepancies_mean_curve(
+            dico_xyzs[i], fs_l, 0.0001, 0.0005, t0=t[0]
+        )
+        fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(20, 10))
+        ax[0].set_title(i)
+        ax[0].plot(c[:-1], I1_c)
+        ax[0].set_xlabel("signal length [s]")
+        ax[0].set_ylabel("I1 value")
+        ax[0].grid()
+        ax[1].set_title(i)
+        ax[1].plot(c[:-1], I2_c)
+        ax[1].set_xlabel("signal length [s]")
+        ax[1].set_ylabel("I2 value")
+        ax[1].grid()
+
+    I1_cx, I2_cx, c = discrepancies_mean_curve(
+        dico_xyzs[name[0]], fs_l, 0.0001, 0.0005, t0=int(t[0])
+    )
+    I1c_r = I1_c[np.logical_and(I1_c > 0, I1_c <= 1)]
+    I2c_r = I1_c[np.logical_and(I2_c > 0, I2_c <= 1)]
+    c1 = c[np.isclose(I1_cx, [0.01], atol=0.0001)]
+    c2 = c[np.isclose(I2_cx, [0.0005], atol=0.0001)]
+    cs = np.minimum(np.mean(c1), np.mean(c2))
+    print(f"distances (c1,c2) : {np.mean(c1),np.mean(c2)}")
+    print(f"smallest c* : {np.minimum(np.mean(c1),np.mean(c2))}")
+    print(f"Highest length short time series :{(cs-t[0])*fs_l}")
+
+
 def Interval_calculator_all(dico_signal, name_signal, fs):
     dic_segment_lead = {}
     for i in name_signal:
@@ -185,6 +259,65 @@ def is_segment_flatline(sig):
     if len(cond[cond == True]) < 0.50 * len(sig):
         return False
     return True
+
+
+def TSD_plot(dico_lead, name_lead, segment_length, fs, t):
+
+    D_lead = {}
+    for i in name_lead:
+        w = 1
+        Ds = np.array([])
+        sig = dico_lead[i]
+        while (w * segment_length * fs) <= len(sig):
+            sig_c = sig[
+                int((w - 1) * segment_length * fs) : int((w) * segment_length * fs)
+            ]
+            L1 = Lq_k(sig_c, 1, fs)
+            L2 = Lq_k(sig_c, 2, fs)
+            Dv = (np.log(L1) - np.log(L2)) / (np.log(2))
+            Ds = np.append(Ds, Dv)
+            w += 1
+        D_lead[i] = Ds
+
+    w_length = [
+        w * segment_length for w in range(0, int((len(t) / fs) * (1 / segment_length)))
+    ]
+
+    for i in name_lead:
+        plt.plot(w_length, D_lead[i], label=i)
+    plt.xlabel("Time interval")
+    plt.ylabel("TSD value")
+    plt.legend(loc="best", bbox_to_anchor=(1, 1))
+    plt.grid()
+    plt.show()
+
+
+def TSDvsNoiseLevel(
+    noise_level, path_to_data, fs, list_attractor=["lorenz", "rossler"]
+):
+    Dmean = {name: np.array([]) for name in list_attractor}
+    SD_D = {name: np.empty([2, len(noise_level)]) for name in list_attractor}
+    for i, n in zip(noise_level, range(len(noise_level))):
+        for name in list_attractor:
+            mid_Dmean = np.array([])
+            coord, _ = system_coordinates_reader(path_to_data, name)
+            Obs = coord[:, 0].copy()
+            noise_obs = add_observational_noise(Obs.copy(), i)
+            Mean_TSD, _ = TSD_mean_calculator(noise_obs, 100, fs)
+            mid_Dmean = np.append(mid_Dmean, Mean_TSD)
+
+            Dmean[name] = np.append(Dmean[name], np.mean(mid_Dmean.copy()))
+            SD_D[name][:, n] = np.array(
+                [
+                    np.abs(
+                        np.mean(mid_Dmean.copy()) - np.percentile(mid_Dmean.copy(), 25)
+                    ),
+                    np.abs(
+                        np.mean(mid_Dmean.copy()) - np.percentile(mid_Dmean.copy(), 75)
+                    ),
+                ]
+            )
+    return Dmean, SD_D
 
 
 def TSDvsNoiseLevel_array(noise_level, dico_signal, name_lead, fs):
@@ -325,4 +458,14 @@ def TSDvsObsNoise_plot_100ECG(noise_level, dergrossdataset, name_lead, fs):
     plt.show()
 
 
-SNR_level = np.linspace(-10, 100, 10)
+def Random_phase_shuffling(signal):
+    fft_signal = rfft(signal)
+    phase_fs = np.arctan2(fft_signal[2::2], fft_signal[1:-1:2])
+    mag = np.sqrt((fft_signal[1:-1:2]) ** 2 + (fft_signal[2::2]) ** 2)
+    ##phase shuffler:
+    rng_phase = phase_fs.copy()
+    np.random.shuffle(rng_phase)
+    fsrp = mag[:, np.newaxis] * np.c_[np.cos(rng_phase), np.sin(rng_phase)]
+    fsrp = np.r_[fft_signal[0], fsrp.ravel(), fft_signal[-1]]
+    tsr = irfft(fsrp)
+    return tsr
