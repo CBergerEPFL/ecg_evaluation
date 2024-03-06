@@ -20,7 +20,10 @@ def system_coordinates_reader(Path_to_data, Attractor_name, num_attractor=0):
         Tuple : Tuple containing the x,y,z time evolution and the timestep
     """
     path = Path_to_data + f"/{Attractor_name}_attractors"
-    df = pd.read_csv(path + f"/{Attractor_name}__{num_attractor}.csv")
+    if num_attractor is None:
+        df = pd.read_csv(path + ".csv")
+    else:
+        df = pd.read_csv(path + f"/{Attractor_name}__{num_attractor}.csv")
     df_n = df.to_numpy()
     xyzs = df_n[:, 1:4]
     t = df_n[:, 0]
@@ -242,13 +245,6 @@ def Interval_calculator_lead(signal, fs, t0=0):
     dic_segment_lead = (cs - t0) * fs
 
     return dic_segment_lead
-
-
-# def Interval_calculator_all(dico_signal, name_signal, fs):
-#     dic_segment_lead = {}
-#     for i in name_signal:
-#         dic_segment_lead[i] = Interval_calculator_lead(dico_signal[i], fs)
-#     return dic_segment_lead
 
 
 def is_segment_flatline(sig):
@@ -481,7 +477,7 @@ def tsd_plot(dico_lead, name_lead, fs):
 @njit
 def tsd_mean_calculator(signal2, segment_length, fs):
     """
-        Calculate the TSD time evolution of the signal
+        Calculate the mean TSD of the signal
 
     Args:
         signal2 (1D Numpy array ): Signal
@@ -503,6 +499,33 @@ def tsd_mean_calculator(signal2, segment_length, fs):
         elif Ds[w - 1] < 1:
             Ds[w - 1] = 1
     return np.mean(Ds[~np.isnan(Ds)]), np.std(Ds[~np.isnan(Ds)])
+
+
+@njit
+def TSD_calculator_time_series(signal2, segment_length, fs):
+    """
+        Calculate the TSD time evolution of the signal.
+
+    Args:
+        signal2 (1D Numpy array ): Signal
+        segment_length (int): Segment size used to calculate the TSD
+        fs (int): Sampling Frequency
+
+    Returns:
+        Tuple : Tuple containing the time evolution TSD value of the signal and its SD
+    """
+    Ds = np.zeros(int(len(signal2) - segment_length) - 1)
+    for w in range(1, int(len(signal2) - segment_length)):
+        sig_true = signal2[int((w - 1)) : int((w) + segment_length)]
+        L1 = lq_k(sig_true, 1, fs)
+        L2 = lq_k(sig_true, 2, fs)
+        Ds[w - 1] = (np.log(L1) - np.log(L2)) / (np.log(2))
+        ##Thresholding necessary since we use an approximation of the Higuchi method
+        if Ds[w - 1] > 2 or np.isnan(Ds[w - 1]):
+            Ds[w - 1] = 2
+        elif Ds[w - 1] < 1:
+            Ds[w - 1] = 1
+    return Ds, np.mean(Ds[~np.isnan(Ds)])
 
 
 @njit

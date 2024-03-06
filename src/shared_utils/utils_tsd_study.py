@@ -3,9 +3,25 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from scipy.fftpack import rfft, irfft
 from numba import njit
+from metrics.methods.tsd_metrics import (
+    lq_k,
+    discrepancies_mean_curve,
+    Interval_calculator_lead,
+    system_coordinates_reader,
+    is_segment_flatline,
+)
 
 
 def plot_attractor_timevscoord(dico_xyzs, t, name):
+
+    """
+    Function that plots the attractors signal in function of the time.
+
+    Inputs :
+        dico_xyzs (dict) : dictionnary containing the attractors coordinates generated (for x,y,z coordinates)
+        t (Numpy Array) : Array containing the time input use to generate the attractors
+        name (string) : Name of the attractor to be plotted
+    """
     for i in name:
         plt.plot(t, dico_xyzs[i], label=i)
         plt.xlabel("time")
@@ -16,6 +32,14 @@ def plot_attractor_timevscoord(dico_xyzs, t, name):
 
 
 def Plot_attractors(xyzs_attractor, name_attractor):
+    """
+
+    Functino that plot the 3D representation of a given xyz coordinates of a specific attractor
+
+    Args:
+        xyzs_attractor (3D numpy array): Array containing the xyz coordinates value at different time step (shape : time_length*coordinates)
+        name_attractor (string): Name of the plotted attractor
+    """
     ax = plt.figure().add_subplot(projection="3d")
 
     ax.plot(*xyzs_attractor.T, lw=0.5)
@@ -27,27 +51,38 @@ def Plot_attractors(xyzs_attractor, name_attractor):
     plt.show()
 
 
-def system_coordinates_reader(Path_to_data, Attractor_name, num_attractor=0):
-    path = Path_to_data + f"/{Attractor_name}_attractors"
-    df = pd.read_csv(path + ".csv")
-    df_n = df.to_numpy()
-    xyzs = df_n[:, 1:4]
-    t = df_n[:, 0]
-    return xyzs, t
-
-
 def add_observational_noise(sig, SNR):
+    """
+
+    Add, to a given signal, a noise level define by a specific SNR value
+
+    Args:
+        sig (1D numpy Array) : Signal you want to add noise
+        SNR (Float): SNR level you want to add
+
+    Returns:
+        1D numpy array: signal with noise level define by SNR
+    """
     Power_sig = (1 / len(sig)) * np.sum(np.abs(sig) ** 2, dtype=np.float64)
     P_db = 10 * np.log10(Power_sig)
     noisedb = P_db - SNR
     sd_db_watts = 10 ** (noisedb / 10)
-    # sd_noise = np.sqrt(Power_sig/(SNR))
     noise = np.random.normal(0, np.sqrt(sd_db_watts), len(sig))
     sig_noisy = sig + noise
     return sig_noisy
 
 
 def add_observational_noise_val(sig, SNR):
+    """
+    Function that return the noise level added at a given SNR for a specific signal
+
+    Args:
+        sig (1D numpy Array) : Signal you want to add noise
+        SNR (Float): SNR level you want to add
+
+    Returns:
+        float : Noise level added.
+    """
     Power_sig = np.mean(np.abs(sig) ** 2)
     P_db = 10 * np.log10(Power_sig)
     noisedb = P_db - SNR
@@ -59,35 +94,23 @@ def add_observational_noise_val(sig, SNR):
 
 
 @njit
-def Lm_q(signal1, m, k, fs):
-    N = len(signal1)
-    n = np.floor((N - m) / k)
-    norm = (N - 1) / (n * k * (1 / fs))
-    # sum = np.sum(np.abs(np.diff(signal1[m::k], n=1)))
-    sum1 = 0
-    for i in range(1, n):
-        sum1 = sum1 + np.absolute(signal1[m + i * k] - signal1[m + (i - 1) * k])
-    Lmq = (sum1 * norm) / k
-    return Lmq
-
-
-@njit
-def Lq_k(signal, k, fs):
-    # calc_L_series = np.frompyfunc(lambda m: Lm_q(signal, m, k, fs), 1, 1)
-    calc_L_series = np.zeros(k)
-    for m in range(1, k + 1):
-        calc_L_series[m - 1] = Lm_q(signal, m, k, fs)
-    L_average = np.mean(calc_L_series)
-    return L_average
-
-
-@njit
 def TSD_mean_calculator(signal2, segment_length, fs):
+    """
+        Calculate the TSD time evolution of the signal
+
+    Args:
+        signal2 (1D Numpy array ): Signal
+        segment_length (int): Segment size used to calculate the TSD
+        fs (int): Sampling Frequency
+
+    Returns:
+        Tuple : Tuple containing the mean TSD value of the signal and its SD
+    """
     Ds = np.zeros(int(len(signal2) - segment_length) - 1)
     for w in range(1, int(len(signal2) - segment_length)):
         sig_true = signal2[int((w - 1)) : int((w) + segment_length)]
-        L1 = Lq_k(sig_true, 1, fs)
-        L2 = Lq_k(sig_true, 2, fs)
+        L1 = lq_k(sig_true, 1, fs)
+        L2 = lq_k(sig_true, 2, fs)
         Ds[w - 1] = (np.log(L1) - np.log(L2)) / (np.log(2))
         ##Thresholding necessary since we use an approximation of the Higuchi method
         if Ds[w - 1] > 2 or np.isnan(Ds[w - 1]):
@@ -97,127 +120,15 @@ def TSD_mean_calculator(signal2, segment_length, fs):
     return np.mean(Ds[~np.isnan(Ds)]), np.std(Ds[~np.isnan(Ds)])
 
 
-@njit
-def taux_Mean_fast(signal, taux, hprime, h=0):
-    return np.mean((signal[int(h + taux) : int(taux + hprime + h)]))
-
-
-@njit
-def taux_var_fast(signal, taux, hprime, h=0):
-    return np.var(signal[int(h + taux) : int(taux + hprime + h)])
-
-
-@njit(parallel=True)
-def adapted_c(c_val, fs, h, hprime, signal):
-    for l in c_val:
-        if (
-            l * fs + hprime * len(signal) + h * len(signal) > len(signal)
-            and l * fs + h * len(signal) > len(signal) - 1
-        ):
-            c = c_val[c_val < l]
-            break
-    return c
-
-
-@njit
-def I1(c, signal, fs, h, hprime, step_c, t0=0):
-    tab = np.zeros_like(c)
-    for count in range(len(tab)):
-        if count == 0:
-            I1c = (
-                (1 / (h * len(signal)))
-                * step_c
-                * np.abs(
-                    taux_Mean_fast(
-                        signal, t0 * fs, hprime * len(signal), h * len(signal)
-                    )
-                    - taux_Mean_fast(signal, t0 * fs, hprime * len(signal))
-                )
-            )
-            tab[count] = I1c
-        else:
-            I1c = tab[count - 1]
-            I1c = I1c + (
-                (1 / (h * len(signal)))
-                * step_c
-                * np.abs(
-                    taux_Mean_fast(
-                        signal, t0 * fs, hprime * len(signal), h * len(signal)
-                    )
-                    - taux_Mean_fast(signal, t0 * fs, hprime * len(signal))
-                )
-            )
-            tab[count] = I1c
-    return tab[:-1]
-
-
-@njit
-def I2(c, signal, fs, h, hprime, step_c, t0=0):
-    tab = np.zeros_like(c)
-    for count in range(len(tab)):
-        if count == 0:
-            I1c = (
-                (1 / (h * len(signal)))
-                * step_c
-                * np.abs(
-                    taux_var_fast(
-                        signal, t0 * fs, hprime * len(signal), h * len(signal)
-                    )
-                    - taux_var_fast(signal, t0 * fs, hprime * len(signal))
-                )
-            )
-            tab[count] = I1c
-        else:
-            I1c = tab[count - 1]
-            I1c = I1c + (
-                (1 / (h * len(signal)))
-                * step_c
-                * np.abs(
-                    taux_var_fast(
-                        signal, t0 * fs, hprime * len(signal), h * len(signal)
-                    )
-                    - taux_var_fast(signal, t0 * fs, hprime * len(signal))
-                )
-            )
-            tab[count] = I1c
-    return tab[:-1]
-
-
-@njit
-def discrepancies_mean_curve(signal_tot, fs, h, hprime, t0=0):
-    c1 = np.linspace(t0, int((len(signal_tot) / fs) + t0), len(signal_tot))
-    c_adapted = adapted_c(c1, fs, h, hprime, signal_tot)
-    I1_t = I1(c_adapted, signal_tot, fs, h, hprime, 1 / fs, t0)
-    I2_t = I2(c_adapted, signal_tot, fs, h, hprime, 1 / fs, t0)
-    return I1_t, I2_t, c_adapted
-
-
-@njit
-def Interval_calculator_lead(signal, fs, t0=0):
-    h = 0.001
-    hprime = 0.005
-    I1c, I2c, c = discrepancies_mean_curve(signal, fs, h, hprime)
-    c1 = c[np.where(I1c < 0.5)]  # np.max(I1c)/2
-    c2 = c[np.where(I2c < 1.25)]
-    if np.isnan(c1).any():
-        c1 = c1[~np.isnan(c1)]
-    elif np.isnan(c2).any():
-        c2 = c2[~np.isnan(c2)]
-    if len(c1) == 0:
-        cs = c2[-1]
-    elif len(c2) == 0:
-        cs = c1[-1]
-    elif len(c1) == 0 and len(c2) == 0:
-        cs = 0.2
-    else:
-        cs = np.minimum(c1[-1], c2[-1])
-    dic_segment_lead = (cs - t0) * fs
-    # if dic_segment_lead <100 :
-    # dic_segment_lead = 100
-    return dic_segment_lead
-
-
 def get_interval_length_c_val(dico_xyzs, t, name, fs_l):
+    """_summary_
+
+    Args:
+        dico_xyzs (_type_): _description_
+        t (_type_): _description_
+        name (_type_): _description_
+        fs_l (_type_): _description_
+    """
     for i in name:
         I1_c, I2_c, c = discrepancies_mean_curve(
             dico_xyzs[i], fs_l, 0.0001, 0.0005, t0=t[0]
@@ -237,32 +148,52 @@ def get_interval_length_c_val(dico_xyzs, t, name, fs_l):
     I1_cx, I2_cx, c = discrepancies_mean_curve(
         dico_xyzs[name[0]], fs_l, 0.0001, 0.0005, t0=int(t[0])
     )
-    I1c_r = I1_c[np.logical_and(I1_c > 0, I1_c <= 1)]
-    I2c_r = I1_c[np.logical_and(I2_c > 0, I2_c <= 1)]
+    I1_cx = I1_cx[~np.isnan(I1_cx)]
+    I2_cx = I2_cx[~np.isnan(I2_cx)]
+    I1_cx = np.append(I1_cx, I1_cx[-1])
+    I2_cx = np.append(I2_cx, I2_cx[-1])
     c1 = c[np.isclose(I1_cx, [0.01], atol=0.0001)]
-    c2 = c[np.isclose(I2_cx, [0.0005], atol=0.0001)]
-    cs = np.minimum(np.mean(c1), np.mean(c2))
-    print(f"distances (c1,c2) : {np.mean(c1),np.mean(c2)}")
-    print(f"smallest c* : {np.minimum(np.mean(c1),np.mean(c2))}")
+    c2 = c[np.isclose(I2_cx, [0.005], atol=0.0001)]
+    if np.isnan(np.mean(c1)).any():
+        cs = np.mean(c2[~np.isnan(c2)])
+    elif np.isnan(np.mean(c2)).any():
+        cs = np.mean(c1[~np.isnan(c1)])
+    else:
+        cs = np.minimum(np.mean(c1[~np.isnan(c1)]), np.mean(c2[~np.isnan(c2)]))
+    print(
+        f"distances (c1,c2) : {np.mean(c1[~np.isnan(c1)]),np.mean(c2[~np.isnan(c2)])}"
+    )
+    print(f"smallest c* : {cs}")
     print(f"Highest length short time series :{(cs-t[0])*fs_l}")
 
 
 def Interval_calculator_all(dico_signal, name_signal, fs):
+    """_summary_
+
+    Args:
+        dico_signal (_type_): _description_
+        name_signal (_type_): _description_
+        fs (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     dic_segment_lead = {}
     for i in name_signal:
         dic_segment_lead[i] = Interval_calculator_lead(dico_signal[i], fs)
     return dic_segment_lead
 
 
-def is_segment_flatline(sig):
-    cond = np.where(np.diff(sig.copy(), 1) != 0.0, False, True)
-    if len(cond[cond == True]) < 0.50 * len(sig):
-        return False
-    return True
-
-
 def TSD_plot(dico_lead, name_lead, segment_length, fs, t):
+    """_summary_
 
+    Args:
+        dico_lead (_type_): _description_
+        name_lead (_type_): _description_
+        segment_length (_type_): _description_
+        fs (_type_): _description_
+        t (_type_): _description_
+    """
     D_lead = {}
     for i in name_lead:
         w = 1
@@ -272,8 +203,8 @@ def TSD_plot(dico_lead, name_lead, segment_length, fs, t):
             sig_c = sig[
                 int((w - 1) * segment_length * fs) : int((w) * segment_length * fs)
             ]
-            L1 = Lq_k(sig_c, 1, fs)
-            L2 = Lq_k(sig_c, 2, fs)
+            L1 = lq_k(sig_c, 1, fs)
+            L2 = lq_k(sig_c, 2, fs)
             Dv = (np.log(L1) - np.log(L2)) / (np.log(2))
             Ds = np.append(Ds, Dv)
             w += 1
@@ -295,12 +226,23 @@ def TSD_plot(dico_lead, name_lead, segment_length, fs, t):
 def TSDvsNoiseLevel(
     noise_level, path_to_data, fs, list_attractor=["lorenz", "rossler"]
 ):
+    """_summary_
+
+    Args:
+        noise_level (_type_): _description_
+        path_to_data (_type_): _description_
+        fs (_type_): _description_
+        list_attractor (list, optional): _description_. Defaults to ["lorenz", "rossler"].
+
+    Returns:
+        _type_: _description_
+    """
     Dmean = {name: np.array([]) for name in list_attractor}
     SD_D = {name: np.empty([2, len(noise_level)]) for name in list_attractor}
     for i, n in zip(noise_level, range(len(noise_level))):
         for name in list_attractor:
             mid_Dmean = np.array([])
-            coord, _ = system_coordinates_reader(path_to_data, name)
+            coord, _ = system_coordinates_reader(path_to_data, name, num_attractor=None)
             Obs = coord[:, 0].copy()
             noise_obs = add_observational_noise(Obs.copy(), i)
             Mean_TSD, _ = TSD_mean_calculator(noise_obs, 100, fs)
@@ -321,6 +263,17 @@ def TSDvsNoiseLevel(
 
 
 def TSDvsNoiseLevel_array(noise_level, dico_signal, name_lead, fs):
+    """_summary_
+
+    Args:
+        noise_level (_type_): _description_
+        dico_signal (_type_): _description_
+        name_lead (_type_): _description_
+        fs (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     Dmean = {}
     SD_D = {}
     the_mean_lead_calculator = np.array([])
@@ -352,6 +305,17 @@ def TSDvsNoiseLevel_array(noise_level, dico_signal, name_lead, fs):
 
 
 def TSDvsNoiseLevel_100ECG(noise_level, theBIGdataset, name_lead, fs):
+    """_summary_
+
+    Args:
+        noise_level (_type_): _description_
+        theBIGdataset (_type_): _description_
+        name_lead (_type_): _description_
+        fs (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     Big_Dmean = {}
     Big_SDmean = {}
     N = len(theBIGdataset)
@@ -391,6 +355,19 @@ def Comparative_lead_plot(
     name_lead,
     name="TSD",
 ):
+    """_summary_
+
+    Args:
+        Synth_data (_type_): _description_
+        Acc_data (_type_): _description_
+        Unacc_data (_type_): _description_
+        SD_synth (_type_): _description_
+        SD_acc (_type_): _description_
+        SD_unacc (_type_): _description_
+        S_level (_type_): _description_
+        name_lead (_type_): _description_
+        name (str, optional): _description_. Defaults to "TSD".
+    """
     fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(20, 10))
     # plt.rcParams.update({'font.size':20})
     fig.tight_layout(h_pad=4)
@@ -430,6 +407,14 @@ def Comparative_lead_plot(
 
 
 def TSDvsObsNoise_plot_100ECG(noise_level, dergrossdataset, name_lead, fs):
+    """_summary_
+
+    Args:
+        noise_level (_type_): _description_
+        dergrossdataset (_type_): _description_
+        name_lead (_type_): _description_
+        fs (_type_): _description_
+    """
     BDM, BP = TSDvsNoiseLevel_100ECG(noise_level, dergrossdataset, name_lead, fs)
     plt.figure()
     plt.gca().set_prop_cycle(
@@ -459,6 +444,14 @@ def TSDvsObsNoise_plot_100ECG(noise_level, dergrossdataset, name_lead, fs):
 
 
 def Random_phase_shuffling(signal):
+    """_summary_
+
+    Args:
+        signal (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     fft_signal = rfft(signal)
     phase_fs = np.arctan2(fft_signal[2::2], fft_signal[1:-1:2])
     mag = np.sqrt((fft_signal[1:-1:2]) ** 2 + (fft_signal[2::2]) ** 2)
