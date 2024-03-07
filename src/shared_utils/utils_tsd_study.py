@@ -121,13 +121,15 @@ def TSD_mean_calculator(signal2, segment_length, fs):
 
 
 def get_interval_length_c_val(dico_xyzs, t, name, fs_l):
-    """_summary_
+    """
+
+    Return the optimal length interval for a coordinates systems and timestemps coming from chaotic system
 
     Args:
-        dico_xyzs (_type_): _description_
-        t (_type_): _description_
-        name (_type_): _description_
-        fs_l (_type_): _description_
+        dico_xyzs (dict): dictionnary containing the time evolution of x,y,z coordinates of the system
+        t (1D numpy array): Time values at which the system evolved (t axis)
+        name (str): Name of the systme
+        fs_l (int): Frequency with which the timestep were created.
     """
     for i in name:
         I1_c, I2_c, c = discrepancies_mean_curve(
@@ -168,15 +170,17 @@ def get_interval_length_c_val(dico_xyzs, t, name, fs_l):
 
 
 def Interval_calculator_all(dico_signal, name_signal, fs):
-    """_summary_
+    """
+    Calculate the optimal interval for applying the TSD on all signals store in a dictionnary, wiht the method defined by Takumi Sase et al in
+    "Estimating the level of dynamical noise in time series by using fractal dimensions"
 
     Args:
-        dico_signal (_type_): _description_
-        name_signal (_type_): _description_
-        fs (_type_): _description_
+        dico_signal (dict): dictionnary containing the signals with their name (shape of dict : {signal_name : 1D numpy array signal})
+        name_signal (1D numpy array str): Array containing the names of the signals
+        fs (int): Sampling frequency of the signals
 
     Returns:
-        _type_: _description_
+        dict : dictionnary containnig the optimal length for each signal (format : {signal_name : optimal_length_segment})
     """
     dic_segment_lead = {}
     for i in name_signal:
@@ -185,14 +189,16 @@ def Interval_calculator_all(dico_signal, name_signal, fs):
 
 
 def TSD_plot(dico_lead, name_lead, segment_length, fs, t):
-    """_summary_
+    """
+
+    Plot the TSD time evolution for a set of signals (with a predefined segment legnth)
 
     Args:
-        dico_lead (_type_): _description_
-        name_lead (_type_): _description_
-        segment_length (_type_): _description_
-        fs (_type_): _description_
-        t (_type_): _description_
+        dico_lead (dict): dictionnary containing the signals with their name (shape of dict : {signal_name : 1D numpy array signal})
+        name_lead (1D numpy array str): Array containing the names of the signals
+        segment_length (int): segment length
+        fs (int): sampling frequency of the signals
+        t (1D numpy array): time duration of the signal at the sampling frequency fs
     """
     D_lead = {}
     for i in name_lead:
@@ -226,16 +232,18 @@ def TSD_plot(dico_lead, name_lead, segment_length, fs, t):
 def TSDvsNoiseLevel(
     noise_level, path_to_data, fs, list_attractor=["lorenz", "rossler"]
 ):
-    """_summary_
+    """
+
+    Calculate the TSD value of dynamical chaotic system considered for different value of noise level (in dB).
 
     Args:
-        noise_level (_type_): _description_
-        path_to_data (_type_): _description_
-        fs (_type_): _description_
-        list_attractor (list, optional): _description_. Defaults to ["lorenz", "rossler"].
+        noise_level (1D numpy array ): Array containing the SNR level value you want your signal to have
+        path_to_data (str): Path to your data folder
+        fs (int): Sampling frequency used for your signals
+        list_attractor (list, optional): List containing the name (in str) of the signal you want to study.. Defaults to ["lorenz", "rossler"].
 
     Returns:
-        _type_: _description_
+        Tuple : Tuple dicts of mean TSD value and their SD value, at each SNR level for each signal
     """
     Dmean = {name: np.array([]) for name in list_attractor}
     SD_D = {name: np.empty([2, len(noise_level)]) for name in list_attractor}
@@ -263,16 +271,18 @@ def TSDvsNoiseLevel(
 
 
 def TSDvsNoiseLevel_array(noise_level, dico_signal, name_lead, fs):
-    """_summary_
+    """
+    Calculate the TSD value of for ECG recordings, different value of noise level (in dB).
+
 
     Args:
-        noise_level (_type_): _description_
-        dico_signal (_type_): _description_
-        name_lead (_type_): _description_
-        fs (_type_): _description_
+        noise_level (1D numpy array ): Array containing the SNR level value you want your signal to have
+        dico_signal (dict): dictionnary containing the signals with their name (shape of dict : {signal_name : 1D numpy array signal})
+        name_lead (1D numpy array): Array contzaining the name of the lead
+        fs (int): Sampling frequency
 
     Returns:
-        _type_: _description_
+        Tuple: Tuple containing dicts of the TSD mean value and its SD for all lead of each patient , and 2 numpy arrays containing the average of TSD mean and SD value obtained
     """
     Dmean = {}
     SD_D = {}
@@ -305,16 +315,17 @@ def TSDvsNoiseLevel_array(noise_level, dico_signal, name_lead, fs):
 
 
 def TSDvsNoiseLevel_100ECG(noise_level, theBIGdataset, name_lead, fs):
-    """_summary_
+    """
+    Calculate the TSD value of for a dataset of 100 ECG recordings, different value of noise level (in dB).
 
     Args:
-        noise_level (_type_): _description_
-        theBIGdataset (_type_): _description_
-        name_lead (_type_): _description_
-        fs (_type_): _description_
+        noise_level (1D numpy array ): Array containing the SNR level value you want your signal to have
+        theBIGdataset (nD numpy array): Array containing your data in the format of dictionnaries (shape of dict : {signal_name : 1D numpy array signal})
+        name_lead (1D numpy array): Array contzaining the name of the lead
+        fs (int): Sampling frequency
 
     Returns:
-        _type_: _description_
+        Tuple : Tuple of dictionnary containing TSD mean and SD value, at each SNR level for each signal
     """
     Big_Dmean = {}
     Big_SDmean = {}
@@ -354,25 +365,30 @@ def Comparative_lead_plot(
     S_level,
     name_lead,
     name="TSD",
+    iter_lead=-1,
 ):
     """_summary_
 
     Args:
-        Synth_data (_type_): _description_
-        Acc_data (_type_): _description_
-        Unacc_data (_type_): _description_
-        SD_synth (_type_): _description_
-        SD_acc (_type_): _description_
-        SD_unacc (_type_): _description_
-        S_level (_type_): _description_
-        name_lead (_type_): _description_
-        name (str, optional): _description_. Defaults to "TSD".
+        Synth_data (nD numpy array): Array containing your TSD mean value from your synthetic ECG recording data in the format of dictionnaries (shape of dict : {signal_name : 1D numpy array signal})
+        Acc_data (nD numpy array): Array containing your TSD mean value from your "Acceptable" labelled ECG recording data in the format of dictionnaries (shape of dict : {signal_name : 1D numpy array signal})_
+        Unacc_data (nD numpy array): Array containing your TSD mean value from your "Unacceptable" ECG recording data in the format of dictionnaries (shape of dict : {signal_name : 1D numpy array signal})
+        SD_synth (nD numpy array): Array containing your TSD SD value from your synthetic ECG recording data in the format of dictionnaries (shape of dict : {signal_name : 1D numpy array signal})
+        SD_acc (nD numpy array): Array containing your TSD SD value from your "Acceptable" labelled ECG recording in the format of dictionnaries (shape of dict : {signal_name : 1D numpy array signal})
+        SD_unacc (nD numpy array): Array containing your TSD SD value from your "Unacceptable" labelled ECG recording in the format of dictionnaries (shape of dict : {signal_name : 1D numpy array signal})
+        S_level (1D numpy array ): Array containing the SNR level you used to collect your data
+        name_lead (1D numpy array): Array contzaining the name of the lead
+        name (str, optional): Index you used to create your measurement. Defaults to "TSD".
+        iter_lead (int,optional) : Int variable to indicate how many lead you want to plot (can be positive or negative). Defaults to -1
     """
     fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(20, 10))
     # plt.rcParams.update({'font.size':20})
     fig.tight_layout(h_pad=4)
-    coordinates = [(0, y) for y in range(3)]
-    for i, c in zip(name_lead[:3], coordinates):
+    if iter_lead > 0:
+        coordinates = [(0, y) for y in range(iter_lead)]
+    else:
+        coordinates = [(0, y) for y in range(len(name_lead) + iter_lead)]
+    for i, c in zip(name_lead[:iter_lead], coordinates):
 
         lead_synth, lead_acc, lead_unacc = Synth_data[i], Acc_data[i], Unacc_data[i]
         e_synth, e_acc, e_unacc = SD_synth[i], SD_acc[i], SD_unacc[i]
@@ -407,13 +423,15 @@ def Comparative_lead_plot(
 
 
 def TSDvsObsNoise_plot_100ECG(noise_level, dergrossdataset, name_lead, fs):
-    """_summary_
+    """
+
+    Plot mean TSD value evolution, in function of the SNR level, for your entire dataset (for our case : 100 12 lead ECG recording with the same labelling)
 
     Args:
-        noise_level (_type_): _description_
-        dergrossdataset (_type_): _description_
-        name_lead (_type_): _description_
-        fs (_type_): _description_
+        noise_level (1D numpy array ): Array containing the SNR level value you want your signal to have
+        dergrossdataset (nD numpy array): Array containing your data in the format of dictionnaries (shape of dict : {signal_name : 1D numpy array signal})
+        name_lead (1D numpy array): Array contzaining the name of the lead
+        fs (int): Sampling frequency
     """
     BDM, BP = TSDvsNoiseLevel_100ECG(noise_level, dergrossdataset, name_lead, fs)
     plt.figure()
@@ -444,13 +462,15 @@ def TSDvsObsNoise_plot_100ECG(noise_level, dergrossdataset, name_lead, fs):
 
 
 def Random_phase_shuffling(signal):
-    """_summary_
+    """
+
+    Function that randomly shuffle the phase of your signal
 
     Args:
-        signal (_type_): _description_
+        signal (1D numpy array): Signal you want to shuffle
 
     Returns:
-        _type_: _description_
+        1D numpy array : Phase shuffled signal
     """
     fft_signal = rfft(signal)
     phase_fs = np.arctan2(fft_signal[2::2], fft_signal[1:-1:2])
