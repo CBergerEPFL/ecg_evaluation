@@ -9,7 +9,7 @@ dependencies = [
     "ipywidgets>=8.0.4",
     "matplotlib>=3.6.3",
     "pandas>=1.5.3",
-    "scikit-learn>=1.1.2",
+    "scikit-learn>=1.4.1.post1",
     "scipy>=1.9.3",
     "tqdm>=4.66.2",
     "optuna>=3.1.0",
@@ -33,6 +33,7 @@ dependencies = [
     "neurokit2>=0.2.7",
     "datashader>=0.16.0",
     "desolver>=4.4.1",
+    "sklearn>=0.0.post12",
 ]
 requires-python = ">=3.10"
 license = {text = "MIT"}

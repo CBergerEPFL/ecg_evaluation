@@ -42,7 +42,7 @@ def train_model(
     feature_selection=None,
     nb_fold=5,
     save_name=None,
-    aggregation="mean",
+    aggregation="mean"
 ):
     """Train a model on the input data and evaluate it
 

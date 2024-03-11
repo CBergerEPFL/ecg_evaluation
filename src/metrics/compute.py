@@ -86,7 +86,8 @@ def save_metrics_to_xarray(
     np_metrics = compute_metrics(
         signal, fs, list_methods, normalization=True, verbose=verbose
     )
-    if signal.shape[1] > 12:
+    print(signal.shape)
+    if signal.shape[2] > 12:
 
         da_metric = xr.DataArray(
             np_metrics,
@@ -110,7 +111,7 @@ def save_metrics_to_xarray(
     ds_data["quality_metrics"] = da_metric
 
     if save_path is not None:
-        if signal.shape[1] > 12:
+        if signal.shape[2] > 12:
             path_to_file = os.path.join(save_path, save_name_metric)
         else:
             path_to_file = os.path.join(save_path, "quality_metrics.nc")

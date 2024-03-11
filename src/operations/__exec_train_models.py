@@ -39,8 +39,10 @@ def main():
         list_features=list_features,
         # feature_selection="L2_regularization",
         nb_fold=5,
-        save_name="lgbm_prob"
+        save_name="lgbm",
         # save_name="L2_reg_logistic",
+        aggregation = "min"
+
     )
 
 

@@ -14,6 +14,9 @@ mount_path = "U"
 if not os.path.exists(results_path):
     os.mkdir(results_path)
 
+if not os.path.exists(data_path):
+    os.mkdir(data_path)
+
 if not os.path.exists(os.path.join(results_path, "evaluation_metrics")):
     os.mkdir(os.path.join(results_path, "evaluation_metrics"))
 
