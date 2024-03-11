@@ -42,6 +42,7 @@ def train_model(
     feature_selection=None,
     nb_fold=5,
     save_name=None,
+    aggregation="mean",
 ):
     """Train a model on the input data and evaluate it
 
@@ -52,7 +53,7 @@ def train_model(
     kwargs = {}
     ds_metrics = xr.load_dataset(input_data_path)
     df_X_mean, df_y = extract_index_label(
-        ds_metrics, list_features, aggregation_method="mean"
+        ds_metrics, list_features, aggregation_method=aggregation
     )
     feature_checker(df_X_mean)
     if (list_features is None) and feature_selection is None:
@@ -90,7 +91,7 @@ def train_model(
         kwargs["hp"] = param_fixed | param_hp
 
         df_X_min, _ = extract_index_label(
-            ds_metrics, list_features, aggregation_method="min"
+            ds_metrics, list_features, aggregation_method=aggregation
         )
         X = np.concatenate((df_X_mean.values, df_X_min.values), axis=-1)
         metric_name_merged = [f"{x}_mean" for x in df_X_mean.columns] + [
@@ -99,7 +100,7 @@ def train_model(
         X = pd.DataFrame(X, columns=metric_name_merged)
         y = pd.DataFrame(df_y.values, columns=["y"])
 
-    perform_cv_evaluation(X, y, model_type, nb_fold, save_name, **kwargs)
+    perform_cv_evaluation(X, y, model_type, nb_fold, save_name, aggregation, **kwargs)
 
     return True
 
@@ -124,7 +125,9 @@ def pick_model(model_type, **kwargs):
     return model
 
 
-def perform_cv_evaluation(X, y, model_type, nb_fold, save_name, **kwargs):
+def perform_cv_evaluation(
+    X, y, model_type, nb_fold, save_name, aggregation="mean", **kwargs
+):
     """
 
     Perform model evaluation through Stratified Cross Validation
@@ -167,12 +170,23 @@ def perform_cv_evaluation(X, y, model_type, nb_fold, save_name, **kwargs):
 
     if save_name is not None:
         # print(model.components.custom_loss)
-        data_results.dump_to_file(save_name)
-        dd.dump(model, open(os.path.join(results_path, save_name + ".sav"), "wb"))
+        if not os.path.exists(os.path.join(results_path, "model_saved", aggregation)):
+            os.makedirs(os.path.join(results_path, "model_saved", aggregation))
+        data_results.dump_to_file(save_name, aggregation=aggregation)
+        dd.dump(
+            model,
+            open(
+                os.path.join(
+                    results_path, "model_saved", aggregation, save_name + ".sav"
+                ),
+                "wb",
+            ),
+        )
 
     metrics_cv(
         data_results.dict_results,
         save_name,
+        aggregation=aggregation,
         t_used=None,
     )
 

@@ -32,7 +32,7 @@ from utils_type import Results_Data
 seed = 0
 
 
-def metrics_cv(results: dict, save_name, t_used=None):
+def metrics_cv(results: dict, save_name, aggregation, t_used=None):
 
     """
     Function that calculate Metrics for labelled dataset obtained after Cross Validation. Metrics Calculated :
@@ -110,7 +110,13 @@ def metrics_cv(results: dict, save_name, t_used=None):
         df_results.loc[key, "std"] = np.round(val.std(), 2)
 
     if save_name is not None:
+        if not os.path.exists(
+            os.path.join(results_path, "evaluation_metrics", aggregation)
+        ):
+            os.makedirs(os.path.join(results_path, "evaluation_metrics", aggregation))
         df_results.to_csv(
-            os.path.join(results_path, "evaluation_metrics", f"{save_name}.csv")
+            os.path.join(
+                results_path, "evaluation_metrics", aggregation, f"{save_name}.csv"
+            )
         )
     return df_results

@@ -28,7 +28,7 @@ def main():
         "Flatline",
         "TSD",
     ]
-    evaluate_list_indices(input_data_path, list_features, aggregation_methods="min")
+    evaluate_list_indices(input_data_path, list_features, aggregation_methods="mean")
 
 
 if __name__ == "__main__":

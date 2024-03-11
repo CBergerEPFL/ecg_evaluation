@@ -18,9 +18,13 @@ class Results_Data:
         self._proba_unacceptable = []
         self._label = []
 
-    def dump_to_file(self, save_name):
+    def dump_to_file(self, save_name, aggregation="mean"):
+        if not os.path.exists(os.path.join(results_path, "proba_methods", aggregation)):
+            os.makedirs(os.path.join(results_path, "proba_methods", aggregation))
         with open(
-            os.path.join(results_path, "proba_methods", f"proba_{save_name}.pkl"),
+            os.path.join(
+                results_path, "proba_methods", aggregation, f"proba_{save_name}.pkl"
+            ),
             "wb",
         ) as f:
             pkl.dump(self.dict_results, f)

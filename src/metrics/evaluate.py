@@ -17,10 +17,15 @@ from shared_utils.utils_type import Results_Data
 
 
 def evaluate_index(
-    df_index: pd.DataFrame, df_label: pd.DataFrame, save_name=None, thres_metric=None
+    df_index: pd.DataFrame,
+    df_label: pd.DataFrame,
+    save_name=None,
+    aggregation="mean",
+    thres_metric=None,
 ):
 
-    """Evaluate and compute metrics of a list of indices.
+    """
+    Evaluate and compute metrics of a list of indices.
 
     Args:
         df_index (Pandas Dataframe) : Dataframe containing the indexes vaues for each patient (and each lead).
@@ -46,11 +51,12 @@ def evaluate_index(
     data_results = Results_Data(save_name)
     data_results.append_results(np_prob[:, 1], np_prob[:, -1])
     if save_name is not None:
-        data_results.dump_to_file(save_name)
+        data_results.dump_to_file(save_name, aggregation)
 
     metrics_cv(
         data_results.dict_results,
         save_name,
+        aggregation=aggregation,
         t_used=thres_metric,
     )
 
@@ -70,5 +76,9 @@ def evaluate_list_indices(input_data_path, list_features, aggregation_methods="m
             ds_metrics, feature, aggregation_method=aggregation_methods
         )
         evaluate_index(
-            df_X, df_y, save_name=feature + f"_{aggregation_methods}", thres_metric=None
+            df_X,
+            df_y,
+            save_name=feature,
+            aggregation=aggregation_methods,
+            thres_metric=None,
         )
