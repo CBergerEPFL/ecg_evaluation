@@ -41,7 +41,7 @@ def main():
         nb_fold=5,
         save_name="lgbm",
         # save_name="L2_reg_logistic",
-        aggregation = "min"
+        aggregation = "mean"
 
     )
 

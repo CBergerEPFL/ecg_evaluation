@@ -6,6 +6,7 @@ from sklearn.feature_selection import SelectFromModel, mutual_info_regression
 from sklearn.linear_model import LogisticRegression
 from skfeature.utility.entropy_estimators import midd, cmidd
 from skfeature.function.information_theoretical_based.LCSI import lcsi
+from statsmodels.stats.outliers_influence import variance_inflation_factor
 import sys
 import matplotlib.pyplot as plt
 from scipy import stats
@@ -13,6 +14,36 @@ from scipy import stats
 sys.path.append(os.path.join(os.getcwd(), ".."))
 from kneed import KneeLocator
 
+def cal_vif(x):
+    """
+
+    Perform Variance Inflation Factor (VIF) Feature selection 
+    ##TODO Change it to JMI VIF feature selection
+
+    Args:
+        x (Pandas Dataframe): Design Matrix containing your feature
+
+    Returns:
+        output (Numpy Array 1D): Array containing the selected feature
+    """
+    thresh_up = 10
+    thresh_down = 5
+    output = pd.DataFrame()
+    k = x.shape[1]
+    vif = [variance_inflation_factor(x.values,i) for i in range(x.shape[1])]
+    for i in range(1,k):
+        a = np.argmax(vif)
+        print('Max vif is for variable no:',a)
+        if (vif[a]<=thresh_up and vif[a]>=thresh_down):
+            break
+        if (i==1):
+            output = x.drop(x.columns[a],axis=1)
+            vif = [variance_inflation_factor(output.values,j) for j in range(output.shape[1])]
+        elif (i>1):
+            output = output.drop(output.columns[a],axis=1)
+            vif = [variance_inflation_factor(output.values,j) for j in range(output.shape[1])]
+            
+    return output
 
 def backward_model_selection(X, y):
     """
