@@ -134,8 +134,8 @@ def comparison_roc_pr_mean_curve(path_results, methods):
         path_results (String): Path toward folder containing probability predicted by each method
         methods (String List):  List containning the methods to be compared
     """
-    plt.rcParams.update({"font.size": 32})
-    plt.rcParams["legend.fontsize"] = 32
+    plt.rcParams.update({"font.size": 40})
+    plt.rcParams["legend.fontsize"] = 40
     dict_results = {}
     for method in methods:
         name_file = f"proba_{method}.pkl"
@@ -145,7 +145,7 @@ def comparison_roc_pr_mean_curve(path_results, methods):
                 dict_results[method] = pkl.load(f)
         else:
             print(f"file {path_file} not found")
-
+    legend_properties = {'weight':'bold'}
     fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(40, 20), constrained_layout=True)
     fig.tight_layout(w_pad=5)
     color = iter(plt.cm.rainbow(np.linspace(0, 1, len(dict_results))))
@@ -179,31 +179,37 @@ def comparison_roc_pr_mean_curve(path_results, methods):
         tpr_avg = np.mean(tprs, axis=0)
         mean_auc_roc = np.mean(aucs_roc)
         std_auc_roc = np.std(aucs_roc)
-
+##: AUC = {mean_auc_roc:.2f} +- {std_auc_roc:.2f}
         ax[0].plot(
             mean_fpr,
             tpr_avg,
             color=c,
-            label=f"{name_model} : AUC = {mean_auc_roc:.2f} +- {std_auc_roc:.2f}",
+            label=f"{name_model}",
+            linewidth=5
         )
+## AUC = {mean_auc_pr:.2f} +- {std_auc_pr:.2f}
         ax[1].plot(
             mean_recall,
             precision_avg,
             color=c,
-            label=f"{name_model}: AUC = {mean_auc_pr:.2f} +- {std_auc_pr:.2f}",
+            label=f"{name_model}",
+            linewidth=5
         )
-
+    
     ax[0].plot([0, 1], [0, 1], "--k", label="Reference line")
     ax[0].set_xlabel("False Positive Rate")
     ax[0].set_ylabel("True Positive Rate")
     ax[0].set_title("Testing mean ROC Curve for all indexes created ")
-    ax[0].legend(loc="lower center")
+
+    #ax[0].legend(bbox_to_anchor = (1.50, 0.6), loc='center left',fancybox=False, shadow=False)
     ax[0].grid()
 
     ax[1].plot([0, 1], [0, 0], "--k", label="Reference line")
     ax[1].set_xlabel("Recall")
     ax[1].set_ylabel("Precision")
     ax[1].set_title("Testing mean PR Curve for all indexes created ")
-    ax[1].legend(loc="lower center")
+    #ax[1].legend(loc='lower rig',fancybox=False, shadow=False)
     ax[1].grid()
+    handles, labels = ax[0].get_legend_handles_labels()
+    fig.legend(handles, labels, bbox_to_anchor =(0.5,-0.8), loc='lower center',fontsize = 60)
     plt.show()

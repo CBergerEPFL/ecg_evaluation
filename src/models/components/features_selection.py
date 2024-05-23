@@ -2,8 +2,12 @@ import numpy as np
 import statsmodels.api as sm
 import pandas as pd
 import os
+from tqdm import tqdm
 from sklearn.feature_selection import SelectFromModel, mutual_info_regression
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegression, LogisticRegressionCV
+from sklearn.model_selection import StratifiedKFold,RandomizedSearchCV
+from sklearn.metrics import matthews_corrcoef,f1_score
+from sklearn.pipeline import Pipeline
 from skfeature.utility.entropy_estimators import midd, cmidd
 from skfeature.function.information_theoretical_based.LCSI import lcsi
 from statsmodels.stats.outliers_influence import variance_inflation_factor
@@ -302,3 +306,42 @@ def list_noduplicate(seq):
     seen = set()
     seen_add = seen.add
     return [x for x in seq if not (x in seen or seen_add(x))]
+
+def feature_selection_nested_cross_val(X,y,num_trial = 30):
+    ##TODO : Done only for logistic regression. Need to implement it for other model (SVM, decision tree,...)
+    columns_name = X.columns
+    X = X.values
+    y = y.values
+
+
+
+    ##Nested cross validation : 
+    features_name = np.array([])
+    mcc_score = np.array([])
+    f1score = np.array([])
+
+    for n in tqdm(range(num_trial),desc = "Number of trials done"):
+        
+        ##initialize fold : 
+        cv_outward = StratifiedKFold(n_splits = 5,shuffle=True,random_state=1)
+        cv_inner = StratifiedKFold(n_splits = 4,shuffle = True,random_state=1)
+        ## Access outter fold : 
+        for train,test in cv_outward.split(X,y):
+            select = SelectFromModel(LogisticRegression(penalty  = "elasticnet",solver="saga",l1_ratio=0.5))
+            pipeline_model = Pipeline([("select",select),("model",LogisticRegression(random_state=2))])
+            p_grid = {"select_max_features":np.linspace(1,len(columns_name)+1,10) ,"model__C":np.linspace(1,100,10)}
+            search = RandomizedSearchCV(pipeline_model, p_grid, scoring='f1', cv=cv_inner, refit=True)
+            results = search.fit(X[train],y[train])
+            best_model = results["model"].best_estimator_
+            prediction = best_model.predict(X[test])
+            mcc =matthews_corrcoef(y[test],prediction)
+            f1 = f1_score(y[test],prediction)
+            mcc_score = np.append(mcc_score,mcc)
+            f1score = np.append(f1score,f1)
+            features_name = np.append(features_name,columns_name[results["select"].get_support()])
+            if n%10 == 0:
+                print('>F1-score=%.3f, MCC = %.3f, est=%.3f, cfg=%s' % (f1,mcc, results.best_score_, results.best_params_))
+            # summarize the estimated performance of the model)
+    print(features_name)
+
+                
