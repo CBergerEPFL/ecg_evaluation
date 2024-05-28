@@ -211,5 +211,5 @@ def comparison_roc_pr_mean_curve(path_results, methods):
     #ax[1].legend(loc='lower rig',fancybox=False, shadow=False)
     ax[1].grid()
     handles, labels = ax[0].get_legend_handles_labels()
-    fig.legend(handles, labels, bbox_to_anchor =(0.5,-0.8), loc='lower center',fontsize = 60)
+    fig.legend(handles, labels, bbox_to_anchor = (1.28, 0.5), loc='center right')
     plt.show()
