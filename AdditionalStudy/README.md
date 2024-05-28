@@ -37,6 +37,15 @@ Using the 2011 Physionet dataset, we applied, to the leads, a gaussian noise of 
 On Figure 2, for high SNR value, the synthesized ECG leads have a mean TSD value close to 1 (since no noise are present in this signal). We observe that, for low SNR value, all the curves have a similar high TSD value (around 1.9). However, for high SNR level, we observed that some unacceptable have close to lower D value than acceptable lead. This is also observed by the high lower boundary error bars. It can be explained by the fact that, in these unacceptable leads, some signals do not have a PQRST complex. An example is shown on Figure 3. Though no PQRST complex is present, the lead still had a low noise level and is very predictable. This shows us that TSD is independent of the underlying dynamics of the system. For any applications with ECG signals, we must thus preliminarily assess the presence of PQRST complex before using TSD
 
 ![Figure 3](Images/Figure2.png "Figure 3 : Example of an unacceptable lead with low TSD value")
+
+## Part 3 : The TSD evolution of the ECG signal for both healthy and pathological patients
+
+We also wanted to plot the time evolution of the signal TSD (and get a precise estimation of the mean TSD value of the signal) to see if, in the presence of the ECG waves, would influence the TSD value. Using a 100-timesteps length, we observe changes in the D value at specified event. As shown in FIGURE 5, we can see that at locations of QRS complex is associated with a strong decrease in D value (ex: we pass from a value of 1.3 to 1.05 for the left signal and 1.6 to 1.18 for the right signal). This event can also be seen for other waves (such as T-wave), but the TSD decrease isn’t as pronounced as for QRS complex. 
+
+![Figure 4](Images/Figure3.png "Figure 4 : TSD time evolution of Lead V1 signal from two different patients, under sinus rhythm. The associated signal is also present. Only the time interval [0,3] seconds is shown.")
+
+In addition to detecting part of the signal where QRS complex is present, the mean value of this curve constitutes a good estimation of the noise level in the signal. The QRS complex is well formed but the other waves are hardly visible. The presence of artifacts resulted in higher TSD value in regions outside QRS complex.
+
 ## Reference : 
 <a id="1">[1]</a>
 D. Makowski et al., “NeuroKit2: A Python toolbox for neurophysiological signal processing,” Behav. Res. Methods, vol. 53, no. 4, pp. 1689–1696, Aug. 2021, doi: 10.3758/s13428-020-01516-y.
