@@ -68,7 +68,7 @@ Figure 7 shows lead I evolution for patients with Mobitz 2:1 pathology. In this 
 
 FIGURE 8 shows lead I of a patient with Trigeminism pathology. We observe that, using the TSD evolution graph, we can detect the anomalous QRS complex. This is characterized by the absence of P and T wave motifs in the TSD graph at this range. Not only does the TSD can characterized any change in the PQRST complex, but it can also detect enlargement of the QRS complex itself, as it can be seen on FIGURE 9.
 #### Figure 10
-![Figure 10](Images/Figure9.png=200*200 "Figure 10 : TSD evolution for different lags of a 100 points long interval through the signal. The lead recording used in this figure came from a patient showing a Bigeminism pathology (i.e., presence of an PVC (or ESA) due to excitable node, that send a shoch after one heartbeat).")
+![Figure 10](Images/Figure9.png "Figure 10 : TSD evolution for different lags of a 100 points long interval through the signal. The lead recording used in this figure came from a patient showing a Bigeminism pathology (i.e., presence of an PVC (or ESA) due to excitable node, that send a shoch after one heartbeat).")
 
 The last pathology we tested was Ventricular Fibrillation. As shown on FIGURE 10, the TSD plot resemble a sinusoid function, with each minimum being the depolarization of the ventricle. 
 
