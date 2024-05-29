@@ -145,7 +145,6 @@ def comparison_roc_pr_mean_curve(path_results, methods):
                 dict_results[method] = pkl.load(f)
         else:
             print(f"file {path_file} not found")
-    legend_properties = {'weight':'bold'}
     fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(40, 20), constrained_layout=True)
     fig.tight_layout(w_pad=5)
     color = iter(plt.cm.rainbow(np.linspace(0, 1, len(dict_results))))
