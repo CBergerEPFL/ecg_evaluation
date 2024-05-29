@@ -44,9 +44,39 @@ We also wanted to plot the time evolution of the signal TSD (and get a precise e
 
 ![Figure 4](Images/Figure3.png "Figure 4 : TSD time evolution of Lead V1 signal from two different patients, under sinus rhythm. The associated signal is also present. Only the time interval [0,3] seconds is shown.")
 
-In addition to detecting part of the signal where QRS complex is present, the mean value of this curve constitutes a good estimation of the noise level in the signal. The QRS complex is well formed but the other waves are hardly visible. The presence of artifacts resulted in higher TSD value in regions outside QRS complex.
+
+![Figure 5](Images/Figure4.png "Figure 5 : Time evolution of leads and TSD value for the entire signal and at a specific time interval. The mean TSD value of the signal is given. ")
+
+In addition to detecting part of the signal where QRS complex is present, the mean value of this curve constitutes a good estimation of the noise level in the signal (Figure 5). The QRS complex is well formed but the other waves are hardly visible. The presence of artifacts resulted in higher TSD value in regions outside QRS complex.
+
+### TSD and ECG pathologies : 
+
+Previous results were shown for ECG recording from healthy. We were also interested in seeing the behavior of the TSD for pathological case. We wanted to know if the TSD time evolution could be influenced by changes of ECG waveform and intervals due to pathology (such as Ventricular fibrillation and ESV).
+
+![Figure 6](Images/Figure5.png "Figure 6 : TSD evolution for different lags of a 100 points long interval through the signal. The lead recording used in this figure came from a patient showing bradycardia and no changes in ECG waveform")
+
+Figure 6 shows TSD evolution for Lead V3 of a patient with a heart rate of 30 BPM. No deformation of the PQRST complex is present and artifact level don’t impact much the ECG dynamic, according to the TSD score.  When looking at TSD evolution for one QRS complex, we observe that each wave is associated with a strong decrease of TSD. The difference between each wave is their amount of TSD decrease: QRS wave complex is the wave associated with the strongest decrease in TSD value (i.e., we pass from a TSD value of 1.4 to 1.08, when entering the QRS complex). It is also the complex where the TSD value become a horizontal line up until the interval exit the QRS complex (i.e., for lags around 2.1 and 2.3, the TSD does not vary much and stay close to a value of 1.08). Following the QRS complex, T-wave has the second greatest decrease in TSD value. P-wave has the lowest TSD decrease observed. No possible shape in its TSD evolution can be observed. This can be explained by its proximity to the QRS complex, which may overshadow it due to the 100-segment length used to calculate it.
+
+![Figure 7](Images/Figure6.png "Figure 7 : TSD evolution for different lags of a 100 points long interval through the signal. The lead recording used in this figure came from a patient showing a Mobitz 2:1 conduction pathology (i.e., Block of AV conduction leading to apparition of 2 P-wave for 1 QRS wave")
+
+Figure 7 shows lead I evolution for patients with Mobitz 2:1 pathology. In this case, we can perfectly detect the P-wave, in the TSD plot. In addition, Mobitz 2:1 is also well represented in the TSD evolution plot. Indeed, the 2 P-waves are recognizable on the TSD evolution as they share the same shape (with the same variation in TSD amplitude, as observed between lags 1.5 and 3.0). Thus, TSD evolution in time can detect pathological event associated with AV conduction blockage.
+
+![Figure 8](Images/Figure7.png "Figure 8 : TSD evolution for different lags of a 100 points long interval through the signal. The lead recording used in this figure came from a patient showing a Trigeminism pathology (i.e., presence of an PVC (or ESA) due to excitable node, that send a shock after two heartbeats. Trigeminism is characterized by presence of additional P-wave (noted P’) which is followed by a PVC).")
+
+![Figure 9](Images/Figure8.png "Figure 9 : TSD evolution for different lags of a 100 points long interval through the signal. The lead recording used in this figure came from a patient showing a Bigeminism pathology (i.e., presence of an PVC (or ESA) due to excitable node, that send a shoch after one heartbeat).")
+
+
+FIGURE 8 shows lead I of a patient with Trigeminism pathology. We observe that, using the TSD evolution graph, we can detect the anomalous QRS complex. This is characterized by the absence of P and T wave motifs in the TSD graph at this range. Not only does the TSD can characterized any change in the PQRST complex, but it can also detect enlargement of the QRS complex itself, as it can be seen on FIGURE 9.
+
+![Figure 10](Images/Figure9.png "Figure 10 : TSD evolution for different lags of a 100 points long interval through the signal. The lead recording used in this figure came from a patient showing a Bigeminism pathology (i.e., presence of an PVC (or ESA) due to excitable node, that send a shoch after one heartbeat).")
+
+The last pathology we tested was Ventricular Fibrillation. As shown on FIGURE 10, the TSD plot resemble a sinusoid function, with each minimum being the depolarization of the ventricle. 
+
+Though when looking at the TSD time evolution of the signal, we were also able to detect specific dynamic associated with the ECG waveforms, we were mainly limited by the segment length used. To calculate the TSD at a specific signal time point, we extracted a 100 timesteps  of the signal and applied the formula on it. The 100 points was the lowest segment length we could use, as we found TSD value instabilities start to appear below this. This can also be extended for Hurst Exponent, as indexes calculating long term correlation in the signal are dependent on the time series size used to calculate them [[2]]. This limitation caused TSD time evolution to have lags span lower than the signal time span. Then, TSD evolution associated to a specific wave to by impacted by the presence of other nearby waves, as well as the amplitude of the waves. This is the case of the P-wave in the PQRST complex and is visible in FIGURE 4 and FIGURE 5. In these figures, P-wave TSD value evolution is masked by the QRS complex one, due to their proximity and their difference in amplitude. Finally, we looked at TSD time evolution for lead signal with specific pathologies. Though we observed specific pattern of TSD evolution in presence of pathologies, this was only made for specific pathologies. Plus, we didn’t evaluate if this difference were statistically different between pathological and healthy ECG. Further research in that scope should be done to prove these observations.
 
 ## Reference : 
 <a id="1">[1]</a>
 D. Makowski et al., “NeuroKit2: A Python toolbox for neurophysiological signal processing,” Behav. Res. Methods, vol. 53, no. 4, pp. 1689–1696, Aug. 2021, doi: 10.3758/s13428-020-01516-y.
 
+<a id="2">[2]</a>
+A. V. Coronado Jiménez and P. Carpena, “Size Effects on Correlation Measures,” J. Biol. Phys., vol. 31, pp. 121–33, Jan. 2005, doi: 10.1007/s10867-005-3126-8.
