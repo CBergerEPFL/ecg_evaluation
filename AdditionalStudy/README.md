@@ -46,7 +46,7 @@ Figure 4 shows TSD evolution for Lead V3 of a patient with a heart rate of 80 BP
 
 In conclusion, we can see that at locations of QRS complex is associated with a strong decrease in D value. This event can also be seen for other waves (such as T-wave), but the TSD decrease isn’t as pronounced as for QRS complex. 
 #### Figure 4
-![Figure 4](Images/Figure3.png "Figure 4 : TSD time evolution of Lead V1 signal from two different patients, under sinus rhythm with 30 BPM.")
+![Figure 4](Images/Figure3.png "Figure 4 : TSD time evolution of Lead I signal from two different patients, under sinus rhythm with 30 BPM.")
 
 #### Figure 5
 ![Figure 5](Images/Figure4.png "Figure 5 : Time evolution of leads and TSD value for the entire signal and at a specific time interval. The mean TSD value of the signal is given. ")
